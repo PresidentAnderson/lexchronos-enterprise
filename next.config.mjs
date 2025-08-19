@@ -1,11 +1,11 @@
-import type { NextConfig } from "next";
+/** @type {import('next').NextConfig} */
 
 // Import i18n configuration
-const { i18n } = require('./next-i18next.config');
+import i18nConfig from './next-i18next.config.js';
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   // Internationalization
-  i18n,
+  i18n: i18nConfig.i18n,
   // PWA Configuration
   experimental: {
     webpackBuildWorker: true,
@@ -59,35 +59,20 @@ const nextConfig: NextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=self, microphone=(), geolocation=(), battery=()',
-          },
         ],
       },
     ];
   },
 
-  // Performance optimizations
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
-  },
-
-  // Enable compression
+  // Compression
   compress: true,
 
-  // Generate static exports for offline functionality
-  trailingSlash: false,
-  
-  // Power options for mobile optimization
+  // Performance optimizations
   poweredByHeader: false,
-  
-  // React strict mode for better performance
   reactStrictMode: true,
+  
+  // Enable SWC minification
+  swcMinify: true,
 };
 
 export default nextConfig;

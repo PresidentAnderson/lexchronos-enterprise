@@ -1,5 +1,5 @@
 /** @type {import('next-i18next').UserConfig} */
-module.exports = {
+const config = {
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'fr', 'es', 'ar', 'he'], // Including Arabic and Hebrew for RTL support
@@ -78,3 +78,6 @@ module.exports = {
   cleanCode: true,
   debug: process.env.NODE_ENV === 'development',
 };
+
+export default config;
+module.exports = config;
