@@ -68,7 +68,10 @@
     "next-i18next": "^15.2.0",
     "react-i18next": "^13.5.0",
     "i18next": "^23.7.16",
-    "accept-language": "^3.0.18"
+    "accept-language": "^3.0.18",
+    "pg": "^8.11.3",
+    "redis": "^4.6.12",
+    "prom-client": "^15.1.0"
   },
   "devDependencies": {
     "typescript": "^5",
