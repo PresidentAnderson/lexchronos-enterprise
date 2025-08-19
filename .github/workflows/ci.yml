@@ -1,0 +1,334 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # Dependency audit and security check
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level=moderate
+
+      - name: Run dependency vulnerability check
+        run: |
+          npx audit-ci --moderate
+        continue-on-error: false
+
+  # Code quality and linting
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Run Prettier check
+        run: npx prettier --check .
+        continue-on-error: true
+
+  # Build and test
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 21]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: lexchrono_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        run: |
+          # Add migration commands here when implemented
+          echo "Database migrations will run here"
+        env:
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/lexchrono_test
+
+      - name: Run tests
+        run: |
+          # Add test commands here when implemented
+          echo "Tests will run here"
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/lexchrono_test
+          REDIS_URL: redis://localhost:6379
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.node-version == 20
+        with:
+          name: build-artifacts
+          path: |
+            .next/
+            !.next/cache
+          retention-days: 1
+
+  # E2E Testing with Playwright
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: build-test
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: lexchrono_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: Start application
+        run: |
+          npm run start &
+          sleep 10
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/lexchrono_test
+          PORT: 3000
+
+      - name: Run Playwright tests
+        run: |
+          # Add Playwright test command when implemented
+          echo "E2E tests will run here"
+          # npx playwright test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # Docker build test
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: [security, quality]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: lexchrono:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+      - name: Test Docker image
+        run: |
+          docker run --rm -d --name lexchrono-test -p 3000:3000 lexchrono:ci-test
+          sleep 10
+          
+          # Test health endpoint
+          if curl -f http://localhost:3000/api/health; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed"
+            exit 1
+          fi
+          
+          docker stop lexchrono-test
+
+  # Performance and bundle analysis
+  performance:
+    name: Performance Analysis
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Analyze bundle size
+        run: |
+          npm install -g @next/bundle-analyzer
+          # Add bundle analysis when configured
+          echo "Bundle analysis will run here"
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli
+          # Add Lighthouse CI when configured
+          echo "Lighthouse CI will run here"
+
+  # Security scanning
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Notification and status update
+  notify:
+    name: Notify Status
+    runs-on: ubuntu-latest
+    needs: [security, quality, build-test, e2e-tests, docker-build, performance, security-scan]
+    if: always()
+    steps:
+      - name: Check job status
+        run: |
+          echo "CI Status Summary:"
+          echo "Security: ${{ needs.security.result }}"
+          echo "Quality: ${{ needs.quality.result }}"
+          echo "Build & Test: ${{ needs.build-test.result }}"
+          echo "E2E Tests: ${{ needs.e2e-tests.result }}"
+          echo "Docker Build: ${{ needs.docker-build.result }}"
+          echo "Performance: ${{ needs.performance.result }}"
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+
+      - name: Update commit status
+        if: github.event_name == 'push'
+        run: |
+          if [[ "${{ needs.security.result }}" == "success" && 
+                "${{ needs.quality.result }}" == "success" && 
+                "${{ needs.build-test.result }}" == "success" && 
+                "${{ needs.docker-build.result }}" == "success" ]]; then
+            echo "✅ All CI checks passed - Ready for deployment"
+            echo "CI_STATUS=success" >> $GITHUB_ENV
+          else
+            echo "❌ Some CI checks failed - Deployment blocked"
+            echo "CI_STATUS=failure" >> $GITHUB_ENV
+            exit 1
+          fi

@@ -1,0 +1,760 @@
+// LexChronos - Legal Case Management System
+// Comprehensive Prisma Schema for Legal Practice Management
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== USERS MODEL =====
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  firstName String
+  lastName  String
+  fullName  String   // computed field for search
+  role      UserRole @default(LAWYER)
+  isActive  Boolean  @default(true)
+  timezone  String   @default("UTC")
+  
+  // Authentication
+  password  String?
+  lastLogin DateTime?
+  
+  // Profile information
+  phone      String?
+  title      String? // Attorney, Paralegal, etc.
+  barNumber  String? // Bar admission number
+  biography  String?
+  avatar     String? // URL to profile image
+  
+  // Organization association
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Audit fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  assignedCases   Case[]           @relation("CaseAssignee")
+  assignedDeadlines Deadline[]     @relation("DeadlineAssignee")
+  documents       Document[]       @relation("DocumentUploader")
+  billingEntries  BillingEntry[]
+  notes          Note[]
+  createdTimelines Timeline[]      @relation("TimelineCreator")
+  notifications  Notification[]
+
+  @@map("users")
+  @@index([email])
+  @@index([organizationId])
+}
+
+// ===== ORGANIZATIONS MODEL (Law Firms) =====
+model Organization {
+  id              String   @id @default(cuid())
+  name            String
+  type            OrgType  @default(LAW_FIRM)
+  email           String   @unique
+  phone           String?
+  website         String?
+  
+  // Address information
+  address         String?
+  city            String?
+  state           String?
+  zipCode         String?
+  country         String   @default("US")
+  
+  // Legal information
+  taxId           String?  @unique
+  barAssociation  String?
+  license         String?
+  
+  // Subscription & Billing
+  subscriptionTier SubscriptionTier @default(BASIC)
+  billingEmail     String?
+  
+  // Settings
+  isActive        Boolean  @default(true)
+  settings        Json?    // Organization-wide settings
+  
+  // Audit fields
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  users           User[]
+  cases           Case[]
+  documents       Document[]
+  timelines       Timeline[]
+  billingEntries  BillingEntry[]
+  courtDates      CourtDate[]
+  evidence        Evidence[]
+  notes           Note[]
+
+  @@map("organizations")
+  @@index([email])
+}
+
+// ===== CASES MODEL =====
+model Case {
+  id            String     @id @default(cuid())
+  caseNumber    String     @unique
+  title         String
+  description   String?
+  type          CaseType   @default(CIVIL)
+  status        CaseStatus @default(ACTIVE)
+  priority      Priority   @default(MEDIUM)
+  
+  // Client information
+  clientName    String
+  clientEmail   String?
+  clientPhone   String?
+  clientAddress String?
+  
+  // Case details
+  court         String?
+  judge         String?
+  opposingParty String?
+  opposingCounsel String?
+  
+  // Important dates
+  filingDate    DateTime?
+  startDate     DateTime   @default(now())
+  closeDate     DateTime?
+  statuteOfLimitations DateTime?
+  
+  // Financial
+  estimatedValue Float?
+  contingencyFee Float?
+  hourlyRate     Float?
+  
+  // Organization & Assignment
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  assigneeId     String?
+  assignee       User?    @relation("CaseAssignee", fields: [assigneeId], references: [id])
+  
+  // Metadata
+  tags          Json?     // Array of tags for categorization
+  customFields  Json?     // Flexible custom fields
+  
+  // Audit fields
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  documents     Document[]
+  timelines     Timeline[]
+  deadlines     Deadline[]
+  billingEntries BillingEntry[]
+  courtDates    CourtDate[]
+  evidence      Evidence[]
+  notes         Note[]
+
+  @@map("cases")
+  @@index([organizationId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([caseNumber])
+}
+
+// ===== DOCUMENTS MODEL =====
+model Document {
+  id            String       @id @default(cuid())
+  title         String
+  description   String?
+  fileName      String
+  originalName  String
+  filePath      String       // S3 path or file system path
+  fileSize      Int          // in bytes
+  mimeType      String
+  
+  // Document categorization
+  category      DocCategory  @default(GENERAL)
+  type          DocType      @default(OTHER)
+  isConfidential Boolean     @default(false)
+  
+  // Version control
+  version       String       @default("1.0")
+  parentId      String?      // For document versions
+  parent        Document?    @relation("DocumentVersions", fields: [parentId], references: [id])
+  versions      Document[]   @relation("DocumentVersions")
+  
+  // Organization & Case
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  caseId        String?
+  case          Case?        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  // Upload information
+  uploadedById  String
+  uploadedBy    User         @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  
+  // Document processing
+  isProcessed   Boolean      @default(false)
+  ocrText       String?      // OCR extracted text
+  checksum      String?      // File integrity check
+  
+  // Metadata
+  tags          Json?        // Array of tags
+  metadata      Json?        // Custom metadata
+  
+  // Audit fields
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  // Relations
+  evidence      Evidence[]
+  notes         Note[]
+
+  @@map("documents")
+  @@index([organizationId])
+  @@index([caseId])
+  @@index([category])
+  @@index([uploadedById])
+}
+
+// ===== TIMELINES MODEL =====
+model Timeline {
+  id            String       @id @default(cuid())
+  title         String
+  description   String?
+  eventType     EventType    @default(GENERAL)
+  eventDate     DateTime
+  endDate       DateTime?    // For duration events
+  
+  // Location & context
+  location      String?
+  participants  Json?        // Array of participant names/roles
+  
+  // Organization & Case
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  caseId        String
+  case          Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  // Creator
+  createdById   String
+  createdBy     User         @relation("TimelineCreator", fields: [createdById], references: [id])
+  
+  // Timeline properties
+  importance    Importance   @default(NORMAL)
+  isVerified    Boolean      @default(false)
+  source        String?      // Source of information
+  
+  // Metadata
+  tags          Json?        // Array of tags
+  attachments   Json?        // Array of file references
+  
+  // Audit fields
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("timelines")
+  @@index([organizationId])
+  @@index([caseId])
+  @@index([eventDate])
+  @@index([eventType])
+}
+
+// ===== DEADLINES MODEL =====
+model Deadline {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  dueDate       DateTime
+  type          DeadlineType   @default(FILING)
+  priority      Priority       @default(MEDIUM)
+  status        DeadlineStatus @default(PENDING)
+  
+  // Reminder settings
+  reminderDays  Int[]          // Days before due date to send reminders
+  isRecurring   Boolean        @default(false)
+  recurringPattern String?      // CRON-like pattern for recurring deadlines
+  
+  // Case association
+  caseId        String
+  case          Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  // Assignment
+  assignedTo    String?
+  assignee      User?          @relation("DeadlineAssignee", fields: [assignedTo], references: [id])
+  
+  // Completion tracking
+  completedAt   DateTime?
+  completedBy   String?
+  notes         String?        // Completion notes
+  
+  // Metadata
+  tags          Json?          // Array of tags
+  customFields  Json?          // Flexible custom fields
+  
+  // Audit fields
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("deadlines")
+  @@index([caseId])
+  @@index([dueDate])
+  @@index([status])
+  @@index([assignedTo])
+}
+
+// ===== BILLING ENTRIES MODEL =====
+model BillingEntry {
+  id            String      @id @default(cuid())
+  description   String
+  type          BillingType @default(TIME)
+  
+  // Time tracking
+  hours         Float?
+  minutes       Int?        // For precise time tracking
+  hourlyRate    Float?
+  
+  // Expense tracking
+  amount        Float?
+  currency      String      @default("USD")
+  
+  // Date and timing
+  date          DateTime    @default(now())
+  startTime     DateTime?
+  endTime       DateTime?
+  
+  // Organization & Case
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  caseId        String
+  case          Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  // User who performed the work
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  
+  // Billing properties
+  isBillable    Boolean      @default(true)
+  isInvoiced    Boolean      @default(false)
+  invoiceId     String?      // Reference to invoice when billed
+  
+  // Task categorization
+  task          TaskType     @default(RESEARCH)
+  category      String?      // Custom category
+  
+  // Metadata
+  tags          Json?        // Array of tags
+  notes         String?      // Additional notes
+  
+  // Audit fields
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("billing_entries")
+  @@index([organizationId])
+  @@index([caseId])
+  @@index([userId])
+  @@index([date])
+  @@index([isBillable])
+}
+
+// ===== COURT DATES MODEL =====
+model CourtDate {
+  id            String        @id @default(cuid())
+  title         String
+  description   String?
+  courtName     String
+  courtroom     String?
+  address       String?
+  
+  // Date and time
+  scheduledDate DateTime
+  scheduledTime String?       // Time as string (e.g., "9:00 AM")
+  estimatedDuration Int?      // in minutes
+  
+  // Court date details
+  type          CourtDateType @default(HEARING)
+  judge         String?
+  
+  // Case association
+  caseId        String
+  case          Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  // Organization
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Attendees and preparation
+  attendees     Json?         // Array of attendee objects
+  preparation   String?       // Preparation notes
+  outcome       String?       // Outcome notes after the hearing
+  
+  // Status tracking
+  status        CourtStatus   @default(SCHEDULED)
+  isRescheduled Boolean       @default(false)
+  originalDate  DateTime?     // Original date if rescheduled
+  
+  // Reminder settings
+  reminderSet   Boolean       @default(false)
+  reminderDays  Int[]         // Days before to send reminders
+  
+  // Metadata
+  tags          Json?         // Array of tags
+  documents     Json?         // Array of document references
+  
+  // Audit fields
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("court_dates")
+  @@index([organizationId])
+  @@index([caseId])
+  @@index([scheduledDate])
+  @@index([status])
+}
+
+// ===== EVIDENCE MODEL =====
+model Evidence {
+  id            String        @id @default(cuid())
+  title         String
+  description   String?
+  type          EvidenceType  @default(DOCUMENT)
+  category      String?       // Custom categorization
+  
+  // Evidence details
+  source        String?       // Where evidence was obtained
+  dateObtained  DateTime      @default(now())
+  location      String?       // Where evidence was found/taken
+  custodian     String?       // Person responsible for evidence
+  
+  // Chain of custody
+  chainOfCustody Json?        // Array of custody transfer records
+  
+  // Case association
+  caseId        String
+  case          Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  // Organization
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Document reference (if applicable)
+  documentId    String?
+  document      Document?     @relation(fields: [documentId], references: [id])
+  
+  // Evidence properties
+  isAuthenticated Boolean     @default(false)
+  isAdmissible  Boolean?      // null = not determined yet
+  relevance     Relevance     @default(MEDIUM)
+  privilege     PrivilegeType @default(NONE)
+  
+  // Physical properties (for physical evidence)
+  physicalLocation String?    // Where physical evidence is stored
+  condition     String?       // Condition of evidence
+  
+  // Metadata
+  tags          Json?         // Array of tags
+  notes         String?       // Additional notes
+  
+  // Audit fields
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("evidence")
+  @@index([organizationId])
+  @@index([caseId])
+  @@index([type])
+  @@index([documentId])
+}
+
+// ===== NOTES MODEL =====
+model Note {
+  id            String       @id @default(cuid())
+  title         String?      // Optional title
+  content       String       // Note content (rich text/HTML)
+  type          NoteType     @default(GENERAL)
+  
+  // Associations
+  caseId        String?
+  case          Case?        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  documentId    String?
+  document      Document?    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Author
+  authorId      String
+  author        User         @relation(fields: [authorId], references: [id])
+  
+  // Note properties
+  isPrivate     Boolean      @default(false)
+  isPinned      Boolean      @default(false)
+  color         String?      // For color coding notes
+  
+  // Metadata
+  tags          Json?        // Array of tags
+  mentions      Json?        // Array of mentioned users
+  
+  // Audit fields
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("notes")
+  @@index([organizationId])
+  @@index([caseId])
+  @@index([authorId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ===== NOTIFICATIONS MODEL =====
+model Notification {
+  id          String           @id @default(cuid())
+  type        NotificationType
+  title       String
+  message     String
+  
+  // Target user
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Notification status
+  isRead      Boolean          @default(false)
+  isArchived  Boolean          @default(false)
+  readAt      DateTime?
+  
+  // Related entities (optional)
+  relatedId   String?          // ID of related entity (case, deadline, etc.)
+  relatedType String?          // Type of related entity
+  
+  // Action data
+  actionUrl   String?          // URL to navigate when clicked
+  actionData  Json?            // Additional action data
+  
+  // Priority and scheduling
+  priority    Priority         @default(MEDIUM)
+  scheduledFor DateTime?       // For scheduled notifications
+  
+  // Audit fields
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("notifications")
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// ===== ENUMS =====
+enum UserRole {
+  LAWYER
+  PARALEGAL
+  ADMIN
+  CLIENT
+  INTERN
+}
+
+enum OrgType {
+  LAW_FIRM
+  LEGAL_DEPARTMENT
+  SOLO_PRACTICE
+  OTHER
+}
+
+enum SubscriptionTier {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
+
+enum CaseType {
+  CIVIL
+  CRIMINAL
+  FAMILY
+  CORPORATE
+  REAL_ESTATE
+  IMMIGRATION
+  BANKRUPTCY
+  PERSONAL_INJURY
+  EMPLOYMENT
+  INTELLECTUAL_PROPERTY
+  TAX
+  OTHER
+}
+
+enum CaseStatus {
+  ACTIVE
+  CLOSED
+  PENDING
+  ON_HOLD
+  SETTLED
+  DISMISSED
+  WON
+  LOST
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum DocCategory {
+  PLEADING
+  MOTION
+  BRIEF
+  EXHIBIT
+  CORRESPONDENCE
+  CONTRACT
+  DISCOVERY
+  EVIDENCE
+  RESEARCH
+  GENERAL
+}
+
+enum DocType {
+  PDF
+  DOC
+  DOCX
+  TXT
+  IMAGE
+  VIDEO
+  AUDIO
+  SPREADSHEET
+  PRESENTATION
+  EMAIL
+  OTHER
+}
+
+enum EventType {
+  FILING
+  HEARING
+  DEPOSITION
+  MEETING
+  DEADLINE
+  DISCOVERY
+  SETTLEMENT
+  GENERAL
+}
+
+enum Importance {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum DeadlineType {
+  FILING
+  DISCOVERY
+  MOTION
+  RESPONSE
+  HEARING
+  TRIAL
+  APPEAL
+  STATUTE_OF_LIMITATIONS
+  OTHER
+}
+
+enum DeadlineStatus {
+  PENDING
+  COMPLETED
+  OVERDUE
+  CANCELLED
+}
+
+enum BillingType {
+  TIME
+  EXPENSE
+  FLAT_FEE
+  CONTINGENCY
+}
+
+enum TaskType {
+  RESEARCH
+  DRAFTING
+  REVIEW
+  MEETING
+  COURT_APPEARANCE
+  PHONE_CALL
+  EMAIL
+  TRAVEL
+  ADMINISTRATIVE
+  OTHER
+}
+
+enum CourtDateType {
+  HEARING
+  TRIAL
+  DEPOSITION
+  CONFERENCE
+  MOTION
+  SENTENCING
+  APPEAL
+  OTHER
+}
+
+enum CourtStatus {
+  SCHEDULED
+  CONFIRMED
+  POSTPONED
+  CANCELLED
+  COMPLETED
+}
+
+enum EvidenceType {
+  DOCUMENT
+  PHOTO
+  VIDEO
+  AUDIO
+  PHYSICAL
+  DIGITAL
+  TESTIMONY
+  EXPERT_OPINION
+}
+
+enum Relevance {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PrivilegeType {
+  NONE
+  ATTORNEY_CLIENT
+  WORK_PRODUCT
+  SPOUSAL
+  DOCTOR_PATIENT
+  OTHER
+}
+
+enum NoteType {
+  GENERAL
+  MEETING
+  RESEARCH
+  STRATEGY
+  REMINDER
+  FOLLOW_UP
+}
+
+enum NotificationType {
+  DEADLINE_REMINDER
+  COURT_DATE
+  TASK_ASSIGNMENT
+  DOCUMENT_SHARED
+  CASE_UPDATE
+  SYSTEM
+  MESSAGE
+}
+

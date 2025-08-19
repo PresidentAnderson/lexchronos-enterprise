@@ -1,0 +1,103 @@
+{
+  "title": "Cases",
+  "newCase": "New Case",
+  "caseDetails": "Case Details",
+  "caseNumber": "Case Number",
+  "caseTitle": "Case Title",
+  "caseType": "Case Type",
+  "status": "Status",
+  "priority": "Priority",
+  "assignedAttorney": "Assigned Attorney",
+  "client": "Client",
+  "court": "Court",
+  "judge": "Judge",
+  "dateOpened": "Date Opened",
+  "dateClosed": "Date Closed",
+  "nextCourtDate": "Next Court Date",
+  "estimatedValue": "Estimated Value",
+  "actualValue": "Actual Value",
+  "description": "Description",
+  "notes": "Notes",
+  "documents": "Documents",
+  "events": "Events",
+  "timeline": "Timeline",
+  "billing": "Billing",
+  "contacts": "Contacts",
+  "evidence": "Evidence",
+  "actions": {
+    "view": "View Case",
+    "edit": "Edit Case",
+    "close": "Close Case",
+    "archive": "Archive Case",
+    "delete": "Delete Case",
+    "duplicate": "Duplicate Case",
+    "share": "Share Case",
+    "export": "Export Case"
+  },
+  "filters": {
+    "all": "All Cases",
+    "active": "Active",
+    "pending": "Pending",
+    "closed": "Closed",
+    "onHold": "On Hold",
+    "myAssigned": "My Assigned",
+    "unassigned": "Unassigned",
+    "highPriority": "High Priority",
+    "dueThis week": "Due This Week"
+  },
+  "search": {
+    "placeholder": "Search cases...",
+    "byNumber": "By case number",
+    "byTitle": "By title",
+    "byClient": "By client",
+    "byAttorney": "By attorney",
+    "advanced": "Advanced Search"
+  },
+  "sort": {
+    "dateCreated": "Date Created",
+    "dateModified": "Date Modified",
+    "caseNumber": "Case Number",
+    "title": "Title",
+    "client": "Client",
+    "status": "Status",
+    "priority": "Priority",
+    "nextCourtDate": "Next Court Date"
+  },
+  "statusTypes": {
+    "new": "New",
+    "investigation": "Investigation",
+    "discovery": "Discovery",
+    "mediation": "Mediation",
+    "trial": "Trial",
+    "settlement": "Settlement",
+    "appeal": "Appeal",
+    "closed": "Closed",
+    "archived": "Archived"
+  },
+  "priorityLevels": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical",
+    "urgent": "Urgent"
+  },
+  "messages": {
+    "caseCreated": "Case created successfully",
+    "caseUpdated": "Case updated successfully",
+    "caseClosed": "Case closed successfully",
+    "caseDeleted": "Case deleted successfully",
+    "confirmClose": "Are you sure you want to close this case?",
+    "confirmDelete": "Are you sure you want to delete this case?",
+    "noCases": "No cases found",
+    "loadingCases": "Loading cases...",
+    "errorLoading": "Error loading cases"
+  },
+  "outcomes": {
+    "won": "Won",
+    "lost": "Lost",
+    "settled": "Settled",
+    "dismissed": "Dismissed",
+    "withdrawn": "Withdrawn",
+    "pending": "Pending"
+  }
+}

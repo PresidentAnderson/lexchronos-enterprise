@@ -1,0 +1,51 @@
+{
+  "title": "Conditions d'utilisation",
+  "lastUpdated": "Dernière mise à jour : {{date}}",
+  "effectiveDate": "Date d'entrée en vigueur : {{date}}",
+  "introduction": {
+    "title": "Introduction",
+    "content": "Bienvenue sur LexChronos (« nous », « notre » ou « nos »). Ces Conditions d'utilisation (« Conditions ») régissent votre utilisation de la plateforme de gestion de cas juridiques LexChronos (« Service ») exploitée par LexChronos Inc."
+  },
+  "acceptance": {
+    "title": "Acceptation des conditions",
+    "content": "En accédant ou en utilisant notre Service, vous acceptez d'être lié par ces Conditions. Si vous n'êtes pas d'accord avec une partie de ces conditions, vous ne pouvez pas accéder au Service."
+  },
+  "description": {
+    "title": "Description du service",
+    "content": "LexChronos est une plateforme professionnelle de gestion de cas juridiques qui fournit la visualisation de chronologie, la gestion de documents, les outils de collaboration client et d'autres fonctionnalités de gestion de pratique juridique."
+  },
+  "userAccounts": {
+    "title": "Comptes utilisateurs",
+    "registration": "Vous devez vous inscrire pour un compte pour utiliser certaines fonctionnalités du Service. Vous acceptez de fournir des informations exactes, actuelles et complètes lors de l'inscription.",
+    "responsibility": "Vous êtes responsable de la protection du mot de passe et du maintien de la confidentialité de votre compte.",
+    "notification": "Vous acceptez de nous informer immédiatement de tout accès non autorisé ou utilisation de votre compte."
+  },
+  "acceptableUse": {
+    "title": "Politique d'utilisation acceptable",
+    "compliance": "Vous acceptez d'utiliser le Service en conformité avec toutes les lois, réglementations et normes éthiques professionnelles applicables.",
+    "prohibited": "Vous ne pouvez pas utiliser le Service pour :",
+    "prohibitedList": [
+      "Violer toute loi ou réglementation locale, provinciale, nationale ou internationale",
+      "Enfreindre ou violer nos droits de propriété intellectuelle ou les droits d'autrui",
+      "Harceler, abuser, insulter, nuire, diffamer, calomnier, dénigrer, intimider ou discriminer",
+      "Soumettre des informations fausses ou trompeuses",
+      "Télécharger des virus ou autres codes malveillants",
+      "Faire du spam, du phishing, du pharming, du pretexting, spider, crawl ou scraper",
+      "Interférer avec ou contourner les fonctionnalités de sécurité du Service"
+    ]
+  },
+  "dataAndPrivacy": {
+    "title": "Données et confidentialité",
+    "confidentiality": "Nous comprenons la nature sensible des informations juridiques et maintenons des protocoles de confidentialité stricts.",
+    "encryption": "Toutes les données sont chiffrées à la fois en transit et au repos en utilisant des méthodes de chiffrement standard de l'industrie.",
+    "access": "L'accès à vos données est strictement limité au personnel autorisé sur une base de besoin de savoir.",
+    "retention": "Les périodes de rétention des données sont conformes aux normes juridiques et professionnelles applicables."
+  },
+  "contact": {
+    "title": "Informations de contact",
+    "content": "Si vous avez des questions sur ces Conditions d'utilisation, veuillez nous contacter à :",
+    "email": "legal@lexchronos.com",
+    "address": "[Adresse de l'entreprise]",
+    "phone": "[Numéro de téléphone]"
+  }
+}

@@ -1,0 +1,225 @@
+version: '3.8'
+
+services:
+  # Next.js Application
+  lexchrono:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV:-development}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        DATABASE_URL: ${DATABASE_URL}
+        SENTRY_DSN: ${SENTRY_DSN}
+        SENTRY_ORG: ${SENTRY_ORG}
+        SENTRY_PROJECT: ${SENTRY_PROJECT}
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - JWT_SECRET=${JWT_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - EMAIL_SERVER_HOST=${EMAIL_SERVER_HOST}
+      - EMAIL_SERVER_PORT=${EMAIL_SERVER_PORT}
+      - EMAIL_SERVER_USER=${EMAIL_SERVER_USER}
+      - EMAIL_SERVER_PASSWORD=${EMAIL_SERVER_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GA4_ID=${GA4_ID}
+      - GTM_ID=${GTM_ID}
+      - FB_PIXEL_ID=${FB_PIXEL_ID}
+      - CLARITY_PROJECT_ID=${CLARITY_PROJECT_ID}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - lexchrono-network
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    labels:
+      - "com.lexchrono.service=app"
+      - "com.lexchrono.environment=${NODE_ENV:-development}"
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lexchrono}
+      POSTGRES_USER: ${POSTGRES_USER:-lexchrono}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lexchrono_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+      - ./database/backups:/backups
+    ports:
+      - "5432:5432"
+    networks:
+      - lexchrono-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lexchrono} -d ${POSTGRES_DB:-lexchrono}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.lexchrono.service=database"
+
+  # Redis Cache & Sessions
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_dev_password}
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    networks:
+      - lexchrono-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    labels:
+      - "com.lexchrono.service=cache"
+
+  # Nginx Reverse Proxy (for production)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/sites-available:/etc/nginx/sites-available:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - lexchrono
+    networks:
+      - lexchrono-network
+    restart: unless-stopped
+    profiles:
+      - production
+    labels:
+      - "com.lexchrono.service=proxy"
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - lexchrono-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+    labels:
+      - "com.lexchrono.service=monitoring"
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - lexchrono-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+    labels:
+      - "com.lexchrono.service=dashboard"
+
+  # Log Management with Loki
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - lexchrono-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+    labels:
+      - "com.lexchrono.service=logging"
+
+  # Backup Service
+  backup:
+    build:
+      context: ./scripts/backup
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - S3_BUCKET=${S3_BACKUP_BUCKET}
+      - BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY}
+    volumes:
+      - ./database/backups:/backups
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - lexchrono-network
+    restart: unless-stopped
+    profiles:
+      - production
+    labels:
+      - "com.lexchrono.service=backup"
+
+volumes:
+  postgres_data:
+    driver: local
+    labels:
+      - "com.lexchrono.volume=database"
+  redis_data:
+    driver: local
+    labels:
+      - "com.lexchrono.volume=cache"
+  prometheus_data:
+    driver: local
+    labels:
+      - "com.lexchrono.volume=metrics"
+  grafana_data:
+    driver: local
+    labels:
+      - "com.lexchrono.volume=dashboard"
+  loki_data:
+    driver: local
+    labels:
+      - "com.lexchrono.volume=logs"
+
+networks:
+  lexchrono-network:
+    driver: bridge
+    labels:
+      - "com.lexchrono.network=main"

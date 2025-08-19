@@ -1,0 +1,206 @@
+# Prometheus Configuration for LexChronos
+# Global configuration
+global:
+  scrape_interval: 15s # Scrape targets every 15 seconds
+  evaluation_interval: 15s # Evaluate rules every 15 seconds
+  external_labels:
+    cluster: 'lexchronos'
+    environment: '${ENVIRONMENT:-development}'
+
+# Rule files
+rule_files:
+  - "rules/*.yml"
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+      path_prefix: /
+
+# Scrape configuration
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # LexChronos Application
+  - job_name: 'lexchronos-app'
+    static_configs:
+      - targets: ['lexchronos:3000']
+    scrape_interval: 15s
+    metrics_path: /api/metrics
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # Node.js Application Metrics
+  - job_name: 'lexchronos-nodejs'
+    static_configs:
+      - targets: ['lexchronos:3000']
+    scrape_interval: 15s
+    metrics_path: /api/metrics/nodejs
+    scrape_timeout: 10s
+
+  # Database Metrics (PostgreSQL)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Redis Metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Node Exporter (System metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Nginx Metrics (if using)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    honor_labels: true
+
+  # Docker Metrics
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['docker-exporter:9323']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Application-specific Business Metrics
+  - job_name: 'lexchronos-business'
+    static_configs:
+      - targets: ['lexchronos:3000']
+    scrape_interval: 60s
+    metrics_path: /api/metrics/business
+    scrape_timeout: 15s
+
+  # Health Check Monitoring
+  - job_name: 'lexchronos-health'
+    static_configs:
+      - targets: ['lexchronos:3000']
+    scrape_interval: 30s
+    metrics_path: /api/health/metrics
+    scrape_timeout: 5s
+
+  # External Service Monitoring
+  - job_name: 'external-services'
+    static_configs:
+      - targets: ['lexchronos:3000']
+    scrape_interval: 60s
+    metrics_path: /api/metrics/external
+    scrape_timeout: 30s
+
+  # Blackbox Exporter for External URLs
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - https://lexchronos.com
+        - https://api.lexchronos.com
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Certificate Expiry Monitoring
+  - job_name: 'ssl-certificates'
+    metrics_path: /probe
+    params:
+      module: [tls_connect]
+    static_configs:
+      - targets:
+        - lexchronos.com:443
+        - api.lexchronos.com:443
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Kubernetes Pods (if deployed on Kubernetes)
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - lexchronos
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name
+
+# Remote write configuration (for long-term storage)
+remote_write:
+  - url: "${REMOTE_WRITE_URL:-}"
+    remote_timeout: 30s
+    queue_config:
+      capacity: 2500
+      max_shards: 200
+      min_shards: 1
+      max_samples_per_send: 500
+      batch_send_deadline: 5s
+      min_backoff: 30ms
+      max_backoff: 100ms
+
+# Storage configuration
+storage:
+  tsdb:
+    retention.time: 15d
+    retention.size: 10GB
+    path: /prometheus
+    wal-compression: true
+
+# Server configuration
+web:
+  enable_lifecycle: true
+  enable_admin_api: false
+  max_connections: 512
+  read_timeout: 30s
+
+# Telemetry configuration
+telemetry:
+  metrics:
+    enabled: true
+  logging:
+    level: info

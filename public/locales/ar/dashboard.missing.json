@@ -1,0 +1,69 @@
+{
+  "title": "TODO: Translate \"Dashboard\" to AR",
+  "welcome": "TODO: Translate \"Welcome back, {{name}}\" to AR",
+  "overview": "TODO: Translate \"Overview\" to AR",
+  "stats": {
+    "activeCases": "TODO: Translate \"Active Cases\" to AR",
+    "totalClients": "TODO: Translate \"Total Clients\" to AR",
+    "upcomingDeadlines": "TODO: Translate \"Upcoming Deadlines\" to AR",
+    "billableHours": "TODO: Translate \"Billable Hours\" to AR",
+    "revenue": "TODO: Translate \"Monthly Revenue\" to AR",
+    "outstandingInvoices": "TODO: Translate \"Outstanding Invoices\" to AR"
+  },
+  "recentActivity": {
+    "title": "TODO: Translate \"Recent Activity\" to AR",
+    "noActivity": "TODO: Translate \"No recent activity\" to AR",
+    "caseCreated": "TODO: Translate \"Case created: {{caseTitle}}\" to AR",
+    "documentUploaded": "TODO: Translate \"Document uploaded: {{documentName}}\" to AR",
+    "meetingScheduled": "TODO: Translate \"Meeting scheduled with {{clientName}}\" to AR",
+    "deadlineAdded": "TODO: Translate \"Deadline added: {{deadline}}\" to AR",
+    "invoiceSent": "TODO: Translate \"Invoice sent to {{clientName}}\" to AR",
+    "paymentReceived": "TODO: Translate \"Payment received from {{clientName}}\" to AR"
+  },
+  "quickActions": {
+    "title": "TODO: Translate \"Quick Actions\" to AR",
+    "newCase": "TODO: Translate \"New Case\" to AR",
+    "addClient": "TODO: Translate \"Add Client\" to AR",
+    "uploadDocument": "TODO: Translate \"Upload Document\" to AR",
+    "createInvoice": "TODO: Translate \"Create Invoice\" to AR",
+    "scheduleEvent": "TODO: Translate \"Schedule Event\" to AR",
+    "recordTime": "TODO: Translate \"Record Time\" to AR"
+  },
+  "upcomingEvents": {
+    "title": "TODO: Translate \"Upcoming Events\" to AR",
+    "noEvents": "TODO: Translate \"No upcoming events\" to AR",
+    "courtDate": "TODO: Translate \"Court Date\" to AR",
+    "clientMeeting": "TODO: Translate \"Client Meeting\" to AR",
+    "deadline": "TODO: Translate \"Deadline\" to AR",
+    "deposition": "TODO: Translate \"Deposition\" to AR",
+    "mediation": "TODO: Translate \"Mediation\" to AR",
+    "arbitration": "TODO: Translate \"Arbitration\" to AR"
+  },
+  "casesByStatus": {
+    "title": "TODO: Translate \"Cases by Status\" to AR",
+    "active": "TODO: Translate \"Active\" to AR",
+    "pending": "TODO: Translate \"Pending\" to AR",
+    "closed": "TODO: Translate \"Closed\" to AR",
+    "onHold": "TODO: Translate \"On Hold\" to AR"
+  },
+  "performance": {
+    "title": "TODO: Translate \"Performance Metrics\" to AR",
+    "casesWon": "TODO: Translate \"Cases Won\" to AR",
+    "casesLost": "TODO: Translate \"Cases Lost\" to AR",
+    "settlementRate": "TODO: Translate \"Settlement Rate\" to AR",
+    "averageCaseValue": "TODO: Translate \"Average Case Value\" to AR",
+    "clientSatisfaction": "TODO: Translate \"Client Satisfaction\" to AR",
+    "utilizationRate": "TODO: Translate \"Utilization Rate\" to AR"
+  },
+  "notifications": {
+    "title": "TODO: Translate \"Notifications\" to AR",
+    "markAllRead": "TODO: Translate \"Mark all as read\" to AR",
+    "noNotifications": "TODO: Translate \"No new notifications\" to AR",
+    "deadlineApproaching": "TODO: Translate \"Deadline approaching for {{caseTitle}}\" to AR",
+    "courtDateReminder": "TODO: Translate \"Court date reminder: {{date}}\" to AR",
+    "documentExpiring": "TODO: Translate \"Document expiring: {{documentName}}\" to AR",
+    "invoiceOverdue": "TODO: Translate \"Invoice overdue: {{invoiceNumber}}\" to AR",
+    "newMessage": "TODO: Translate \"New message from {{senderName}}\" to AR",
+    "systemUpdate": "TODO: Translate \"System update available\" to AR"
+  }
+}
