@@ -312,7 +312,7 @@ export async function GET(request: NextRequest) {
       take: 10
     });
 
-    preview.deadlineReminders = upcomingDeadlines.map(deadline => {
+    preview.deadlineReminders = upcomingDeadlines.map((deadline: any) => {
       const daysUntilDue = Math.ceil((deadline.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       return {
         id: deadline.id,
