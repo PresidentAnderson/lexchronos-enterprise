@@ -46,9 +46,8 @@ coverage/
 test-results/
 coverage/
 
-# Documentation
+# Documentation (except README.md needed for container)
 docs/
-*.md
 
 # Backup files
 *.backup
@@ -82,8 +81,7 @@ out/
 tmp/
 temp/
 
-# Package manager files
-package-lock.json
+# Package manager files (keep package-lock.json for Docker build)
 yarn.lock
 pnpm-lock.yaml
 
