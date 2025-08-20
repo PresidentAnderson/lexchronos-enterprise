@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
     // Get database payment methods for default status
     const dbPaymentMethods = lawFirm.paymentMethods || [];
-    const defaultPaymentMethodId = dbPaymentMethods.find(pm => pm.isDefault)?.stripePaymentMethodId;
+    const defaultPaymentMethodId = dbPaymentMethods.find((pm: any) => pm.isDefault)?.stripePaymentMethodId;
 
     return NextResponse.json({
       success: true,
