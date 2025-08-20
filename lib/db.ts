@@ -317,3 +317,104 @@ export async function healthCheck(): Promise<{
     };
   }
 }
+
+// Usage-related database functions for billing and subscription management
+
+// Get law firm with subscription details
+export async function getLawFirmWithSubscription(lawFirmId: string) {
+  try {
+    return await prisma.organization.findUnique({
+      where: { id: lawFirmId },
+      include: {
+        subscription: true,
+        users: true,
+        cases: true
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching law firm with subscription:', error);
+    return null;
+  }
+}
+
+// Record usage entry
+export async function recordUsage({
+  lawFirmId,
+  metric,
+  quantity,
+  billingPeriod
+}: {
+  lawFirmId: string;
+  metric: string;
+  quantity: number;
+  billingPeriod: string;
+}) {
+  try {
+    // For now, we'll create a simple usage tracking system
+    // This would be implemented properly based on your billing requirements
+    return {
+      id: `usage_${Date.now()}`,
+      lawFirmId,
+      metric,
+      quantity,
+      timestamp: new Date(),
+      billingPeriod
+    };
+  } catch (error) {
+    console.error('Error recording usage:', error);
+    throw error;
+  }
+}
+
+// Get usage records for a specific period
+export async function getUsageRecordsForPeriod(lawFirmId: string, billingPeriod: string) {
+  try {
+    // Placeholder implementation - would query actual usage table
+    // For now, return empty array since we don't have usage tracking table yet
+    return [];
+  } catch (error) {
+    console.error('Error fetching usage records:', error);
+    return [];
+  }
+}
+
+// Update subscription usage counters
+export async function updateSubscriptionUsage(subscriptionId: string, updateData: {
+  currentUsers?: number;
+  currentStorage?: number;
+}) {
+  try {
+    // For now, just log the update - implement actual database update when subscription model supports it
+    console.log('Updating subscription usage:', subscriptionId, updateData);
+    return true;
+  } catch (error) {
+    console.error('Error updating subscription usage:', error);
+    throw error;
+  }
+}
+
+// Check usage limits for a law firm
+export async function checkUsageLimits(lawFirmId: string) {
+  try {
+    const lawFirm = await getLawFirmWithSubscription(lawFirmId);
+    
+    if (!lawFirm?.subscription) {
+      return {
+        withinLimits: true,
+        warnings: ['No subscription found']
+      };
+    }
+
+    // Placeholder implementation - would check actual limits
+    return {
+      withinLimits: true,
+      warnings: []
+    };
+  } catch (error) {
+    console.error('Error checking usage limits:', error);
+    return {
+      withinLimits: false,
+      warnings: ['Error checking limits']
+    };
+  }
+}

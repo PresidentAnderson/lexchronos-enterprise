@@ -4,9 +4,22 @@
  */
 
 import nodemailer from 'nodemailer';
-import fs from 'fs';
-import path from 'path';
-import handlebars from 'handlebars';
+
+// Dynamic imports to avoid webpack warnings
+let fs: any;
+let path: any;
+let handlebars: any;
+
+// Only import these on server side to avoid webpack bundling issues
+if (typeof window === 'undefined') {
+  try {
+    fs = require('fs');
+    path = require('path');
+    handlebars = require('handlebars');
+  } catch (error) {
+    console.warn('Email templates may not be available:', error);
+  }
+}
 
 export interface EmailTemplate {
   subject: string;
@@ -101,11 +114,17 @@ class EmailService {
   }
 
   private async loadTemplates() {
+    // Only load templates on server side
+    if (typeof window !== 'undefined' || !fs || !path || !handlebars) {
+      console.log('📧 Email templates skipped (client side or dependencies missing)');
+      return;
+    }
+
     const templatesDir = path.join(process.cwd(), 'email-templates');
     
     try {
       if (fs.existsSync(templatesDir)) {
-        const templateFiles = fs.readdirSync(templatesDir).filter(file => file.endsWith('.hbs'));
+        const templateFiles = fs.readdirSync(templatesDir).filter((file: string) => file.endsWith('.hbs'));
         
         for (const file of templateFiles) {
           const templateName = path.basename(file, '.hbs');

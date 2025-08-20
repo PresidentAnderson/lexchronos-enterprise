@@ -73,6 +73,30 @@ const nextConfig = {
   
   // Enable SWC minification
   swcMinify: true,
+
+  // Webpack configuration to suppress Handlebars warnings
+  webpack: (config, { isServer }) => {
+    // Suppress require.extensions warnings from handlebars
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+    };
+
+    // Ignore handlebars require.extensions warning
+    config.ignoreWarnings = [
+      /Critical dependency: the request of a dependency is an expression/,
+      /require\.extensions/,
+    ];
+
+    // Exclude email templates from webpack processing
+    config.module.rules.push({
+      test: /\.hbs$/,
+      use: 'raw-loader',
+    });
+
+    return config;
+  },
 };
 
 export default nextConfig;

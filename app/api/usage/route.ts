@@ -231,7 +231,7 @@ export async function PUT(request: NextRequest) {
     // Record storage usage if provided
     if (currentStorage !== undefined) {
       const storageGB = Math.ceil(currentStorage / 1024);
-      if (storageGB > lawFirm.subscription.storageLimit) {
+      if (lawFirm.subscription.maxStorage && storageGB > Number(lawFirm.subscription.maxStorage) / (1024 * 1024 * 1024)) {
         await recordUsage({
           lawFirmId,
           metric: 'STORAGE_GB',
@@ -242,12 +242,12 @@ export async function PUT(request: NextRequest) {
     }
 
     // Record additional users if provided
-    if (currentUsers !== undefined && lawFirm.subscription.userLimit !== -1) {
-      if (currentUsers > lawFirm.subscription.userLimit) {
+    if (currentUsers !== undefined && lawFirm.subscription.maxUsers) {
+      if (currentUsers > lawFirm.subscription.maxUsers) {
         await recordUsage({
           lawFirmId,
           metric: 'ADDITIONAL_USERS',
-          quantity: currentUsers - lawFirm.subscription.userLimit,
+          quantity: currentUsers - lawFirm.subscription.maxUsers,
           billingPeriod
         });
       }
