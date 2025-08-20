@@ -3,26 +3,64 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from './Button'
 import { cn, formatDate } from '@/lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
+import { Card, CardContent, CardHeader, CardTitle } from './card'
+import { Badge } from './badge'
+import { Separator } from './separator'
+import { Clock, PlayCircle, PauseCircle, StopCircle, Settings, DollarSign, AlertCircle } from 'lucide-react'
 
 export interface Project {
   id: string
   name: string
   clientId: string
+  clientName: string
   hourlyRate: number
+  billingType: 'HOURLY' | 'FLAT_FEE' | 'CONTINGENCY'
+  roundingRules: RoundingRule
+  requiresApproval: boolean
+  color?: string
+}
+
+export interface RoundingRule {
+  type: 'UP' | 'DOWN' | 'NEAREST' | 'NONE'
+  increment: number // in minutes (e.g., 15, 30, 60)
+  minimumTime: number // minimum billable time in minutes
+}
+
+export interface TimeEntry {
+  id: string
+  projectId: string
+  description: string
+  startTime: Date
+  endTime?: Date
+  duration: number // in seconds
+  roundedDuration: number // in seconds after rounding rules applied
+  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'BILLED'
+  billableRate: number
+  totalAmount: number
+  tags: string[]
+  approvedBy?: string
+  approvedAt?: Date
+  notes?: string
 }
 
 export interface TimerWidgetProps {
   projects: Project[]
-  onStartTimer: (projectId: string, description: string) => void
-  onStopTimer: () => void
+  onStartTimer: (projectId: string, description: string, tags?: string[]) => void
+  onStopTimer: (saveEntry?: boolean) => void
   onPauseTimer: () => void
   onResumeTimer: () => void
+  onSaveTimeEntry: (entry: Partial<TimeEntry>) => void
   isRunning: boolean
   isPaused: boolean
   startTime?: Date
   pausedTime?: number
   className?: string
   disabled?: boolean
+  showAdvancedFeatures?: boolean
+  currentEntry?: TimeEntry
+  recentEntries?: TimeEntry[]
+  onEditEntry?: (entry: TimeEntry) => void
 }
 
 export const TimerWidget: React.FC<TimerWidgetProps> = ({
@@ -31,16 +69,25 @@ export const TimerWidget: React.FC<TimerWidgetProps> = ({
   onStopTimer,
   onPauseTimer,
   onResumeTimer,
+  onSaveTimeEntry,
   isRunning,
   isPaused,
   startTime,
   pausedTime = 0,
   className,
   disabled = false,
+  showAdvancedFeatures = true,
+  currentEntry,
+  recentEntries = [],
+  onEditEntry,
 }) => {
   const [selectedProjectId, setSelectedProjectId] = useState('')
   const [description, setDescription] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [elapsedTime, setElapsedTime] = useState(0)
+  const [showSettings, setShowSettings] = useState(false)
+  const [customRate, setCustomRate] = useState<number | null>(null)
+  const [notes, setNotes] = useState('')
 
   // Update elapsed time every second when timer is running
   useEffect(() => {
@@ -78,24 +125,101 @@ export const TimerWidget: React.FC<TimerWidgetProps> = ({
     if (!selectedProjectId || !description.trim()) {
       return
     }
-    onStartTimer(selectedProjectId, description.trim())
-  }, [selectedProjectId, description, onStartTimer])
+    onStartTimer(selectedProjectId, description.trim(), tags)
+  }, [selectedProjectId, description, tags, onStartTimer])
 
   // Handle stop timer
-  const handleStop = useCallback(() => {
-    onStopTimer()
+  const handleStop = useCallback((saveEntry = true) => {
+    if (saveEntry && selectedProject) {
+      const timeEntry: Partial<TimeEntry> = {
+        projectId: selectedProjectId,
+        description: description.trim(),
+        startTime: startTime!,
+        endTime: new Date(),
+        duration: rawDuration,
+        roundedDuration: roundedDuration,
+        status: selectedProject.requiresApproval ? 'SUBMITTED' : 'APPROVED',
+        billableRate: effectiveRate,
+        totalAmount: estimatedEarnings,
+        tags: tags,
+        notes: notes.trim() || undefined
+      }
+      
+      onSaveTimeEntry(timeEntry)
+    }
+    
+    onStopTimer(saveEntry)
     setSelectedProjectId('')
     setDescription('')
+    setTags([])
+    setNotes('')
     setElapsedTime(0)
-  }, [onStopTimer])
+    setCustomRate(null)
+  }, [onStopTimer, onSaveTimeEntry, selectedProject, selectedProjectId, description, startTime, rawDuration, roundedDuration, effectiveRate, estimatedEarnings, tags, notes])
+
+  // Add tag
+  const addTag = useCallback((tag: string) => {
+    if (tag && !tags.includes(tag)) {
+      setTags([...tags, tag])
+    }
+  }, [tags])
+
+  // Remove tag
+  const removeTag = useCallback((tag: string) => {
+    setTags(tags.filter(t => t !== tag))
+  }, [tags])
+
+  // Format duration with rounding indication
+  const formatDurationWithRounding = (seconds: number, showRounding = false) => {
+    const formatted = formatTime(Math.floor(seconds))
+    return showRounding && timeDifference !== 0 
+      ? `${formatted} (${timeDifference > 0 ? '+' : ''}${formatTime(Math.abs(timeDifference / 60))})` 
+      : formatted
+  }
 
   // Get selected project
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
-  // Calculate estimated earnings
-  const estimatedEarnings = selectedProject
-    ? (elapsedTime / 3600) * selectedProject.hourlyRate
-    : 0
+  // Apply rounding rules
+  const applyRounding = useCallback((seconds: number, rules: RoundingRule): number => {
+    const minutes = seconds / 60
+    const increment = rules.increment
+    const minimum = rules.minimumTime
+    
+    // Apply minimum time
+    const adjustedMinutes = Math.max(minutes, minimum)
+    
+    if (rules.type === 'NONE') {
+      return adjustedMinutes * 60
+    }
+    
+    let roundedMinutes: number
+    switch (rules.type) {
+      case 'UP':
+        roundedMinutes = Math.ceil(adjustedMinutes / increment) * increment
+        break
+      case 'DOWN':
+        roundedMinutes = Math.floor(adjustedMinutes / increment) * increment
+        break
+      case 'NEAREST':
+        roundedMinutes = Math.round(adjustedMinutes / increment) * increment
+        break
+      default:
+        roundedMinutes = adjustedMinutes
+    }
+    
+    return roundedMinutes * 60
+  }, [])
+
+  // Calculate durations and earnings
+  const rawDuration = elapsedTime
+  const roundedDuration = selectedProject 
+    ? applyRounding(rawDuration, selectedProject.roundingRules)
+    : rawDuration
+  
+  const effectiveRate = customRate || selectedProject?.hourlyRate || 0
+  const estimatedEarnings = (roundedDuration / 3600) * effectiveRate
+  const timeDifference = roundedDuration - rawDuration
 
   return (
     <div

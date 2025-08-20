@@ -94,6 +94,58 @@ const mainNavItems = [
     title: "Billing",
     href: "/billing",
   },
+  {
+    title: "Conflicts",
+    href: "/conflicts",
+    items: [
+      {
+        title: "Conflict Checker",
+        href: "/conflicts",
+        description: "Run conflict of interest checks",
+      },
+      {
+        title: "Entity Database",
+        href: "/conflicts#entities",
+        description: "Manage conflict entities and relationships",
+      },
+      {
+        title: "Waivers",
+        href: "/conflicts#waivers",
+        description: "Review client conflict waivers",
+      },
+      {
+        title: "Reports",
+        href: "/conflicts#reports",
+        description: "Conflict checking reports and analytics",
+      },
+    ],
+  },
+  {
+    title: "Trust Accounts",
+    href: "/trust",
+    items: [
+      {
+        title: "Trust Dashboard",
+        href: "/trust",
+        description: "IOLTA trust account management and compliance",
+      },
+      {
+        title: "Account Management",
+        href: "/trust#accounts",
+        description: "Create and manage trust accounts",
+      },
+      {
+        title: "Transactions",
+        href: "/trust#transactions",
+        description: "Record deposits, withdrawals, and transfers",
+      },
+      {
+        title: "Reconciliation",
+        href: "/trust#reconciliation",
+        description: "Bank reconciliation and compliance reports",
+      },
+    ],
+  },
 ];
 
 export function Navigation({ user }: NavigationProps) {

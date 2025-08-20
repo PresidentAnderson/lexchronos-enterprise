@@ -48,6 +48,14 @@ model User {
   notes          Note[]
   createdTimelines Timeline[]      @relation("TimelineCreator")
   notifications  Notification[]
+  conflictChecks ConflictCheck[]
+  conflictWaivers ConflictWaiver[]
+  
+  // Client Intake & CRM relations
+  assignedLeads       Lead[]           @relation("LeadAssignee")
+  leadActivities      LeadActivity[]   @relation("ActivityPerformer")
+  reviewedResponses   IntakeResponse[] @relation("ResponseReviewer")
+  handledCommunications Communication[] @relation("CommunicationHandler")
 
   @@map("users")
   @@index([email])
@@ -99,6 +107,21 @@ model Organization {
   subscription    Subscription?
   payments        Payment[]
   invoices        Invoice[]
+  conflictEntities ConflictEntity[]
+  conflictChecks  ConflictCheck[]
+  conflictWaivers ConflictWaiver[]
+  trustAccounts   TrustAccount[]
+  trustTransactions TrustTransaction[]
+  trustLedgerEntries TrustLedgerEntry[]
+  trustBalances   TrustBalance[]
+  trustReconciliations TrustReconciliation[]
+  
+  // Client Intake & CRM relations
+  leads               Lead[]           @relation("LeadOrganization")
+  intakeForms         IntakeForm[]     @relation("IntakeFormOrganization")
+  intakeResponses     IntakeResponse[] @relation("IntakeResponseOrganization")
+  communications      Communication[]  @relation("CommunicationOrganization")
+  clientProfiles      ClientProfile[]  @relation("ClientProfileOrganization")
 
   @@map("organizations")
   @@index([email])
@@ -160,6 +183,21 @@ model Case {
   courtDates    CourtDate[]
   evidence      Evidence[]
   notes         Note[]
+  conflictChecks ConflictCheck[]
+  trustTransactions TrustTransaction[]
+  trustLedgerEntries TrustLedgerEntry[]
+  
+  // Court Rules and Deadlines
+  jurisdictionId    String?
+  jurisdiction      Jurisdiction?      @relation("CaseJurisdiction", fields: [jurisdictionId], references: [id])
+  automatedDeadlines AutomatedDeadline[]
+  deadlineCalculations DeadlineCalculation[]
+  
+  // Client Intake & CRM relations
+  convertedFromLead   Lead?            @relation("ConvertedFromLead")
+  clientProfile       ClientProfile?   @relation("ClientCases", fields: [clientProfileId], references: [id])
+  clientProfileId     String?
+  communications      Communication[]  @relation("CaseCommunications")
 
   @@map("cases")
   @@index([organizationId])
@@ -304,6 +342,11 @@ model Deadline {
   // Audit fields
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  
+  // Court Rules and Deadlines
+  jurisdictionId    String?
+  jurisdiction      Jurisdiction?      @relation("DeadlineJurisdiction", fields: [jurisdictionId], references: [id])
+  automatedDeadlines AutomatedDeadline[]
 
   @@map("deadlines")
   @@index([caseId])
@@ -1004,4 +1047,1525 @@ enum InvoiceStatus {
   VOID
   UNCOLLECTIBLE
 }
+
+// ===== CONFLICT OF INTEREST MODELS =====
+model ConflictEntity {
+  id            String   @id @default(cuid())
+  name          String   // Entity name (person, company, etc.)
+  type          EntityType @default(PERSON)
+  
+  // Contact information
+  email         String?
+  phone         String?
+  address       String?
+  
+  // Identification
+  aliases       Json?    // Array of alternative names/aliases
+  identifiers   Json?    // Array of identifiers (SSN, EIN, etc.)
+  
+  // Entity details
+  description   String?
+  notes         String?
+  
+  // Organization association
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  isActive      Boolean  @default(true)
+  tags          Json?    // Array of tags for categorization
+  
+  // Audit fields
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  relationships ConflictRelationship[] @relation("FromEntity")
+  relatedTo     ConflictRelationship[] @relation("ToEntity")
+  conflicts     ConflictCheck[]
+
+  @@map("conflict_entities")
+  @@index([organizationId])
+  @@index([name])
+  @@index([type])
+}
+
+model ConflictRelationship {
+  id            String           @id @default(cuid())
+  
+  // Relationship definition
+  fromEntityId  String
+  fromEntity    ConflictEntity   @relation("FromEntity", fields: [fromEntityId], references: [id], onDelete: Cascade)
+  
+  toEntityId    String
+  toEntity      ConflictEntity   @relation("ToEntity", fields: [toEntityId], references: [id], onDelete: Cascade)
+  
+  // Relationship details
+  type          RelationshipType @default(BUSINESS)
+  description   String?
+  
+  // Temporal information
+  startDate     DateTime?
+  endDate       DateTime?
+  isActive      Boolean          @default(true)
+  
+  // Strength of relationship
+  strength      RelationshipStrength @default(MEDIUM)
+  
+  // Metadata
+  notes         String?
+  tags          Json?            // Array of tags
+  
+  // Audit fields
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@map("conflict_relationships")
+  @@index([fromEntityId])
+  @@index([toEntityId])
+  @@index([type])
+  @@unique([fromEntityId, toEntityId, type])
+}
+
+model ConflictCheck {
+  id            String         @id @default(cuid())
+  
+  // Check details
+  checkType     ConflictCheckType @default(NEW_CASE)
+  status        ConflictStatus @default(PENDING)
+  
+  // What's being checked
+  entityId      String?        // Primary entity being checked
+  entity        ConflictEntity? @relation(fields: [entityId], references: [id])
+  
+  caseId        String?        // Associated case if applicable
+  case          Case?          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  // Check parameters
+  searchTerms   Json           // Array of search terms used
+  searchScope   ConflictScope  @default(FULL)
+  
+  // Results
+  potentialConflicts Json?     // Array of potential conflict objects
+  conflictLevel ConflictLevel  @default(NONE)
+  
+  // Resolution
+  resolution    ConflictResolution? @default(PENDING)
+  resolutionNotes String?
+  reviewedBy    String?        // User ID who reviewed
+  reviewedAt    DateTime?
+  
+  // Approval workflow
+  approvedBy    String?        // User ID who approved
+  approvedAt    DateTime?
+  
+  // Organization association
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Performed by
+  performedById String
+  performedBy   User           @relation(fields: [performedById], references: [id])
+  
+  // Metadata
+  metadata      Json?          // Additional check metadata
+  
+  // Audit fields
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("conflict_checks")
+  @@index([organizationId])
+  @@index([entityId])
+  @@index([caseId])
+  @@index([status])
+  @@index([performedById])
+  @@index([createdAt])
+}
+
+model ConflictWaiver {
+  id            String         @id @default(cuid())
+  
+  // Waiver details
+  conflictCheckId String
+  conflictCheck   ConflictCheck @relation(fields: [conflictCheckId], references: [id], onDelete: Cascade)
+  
+  // Waiver information
+  clientName    String         // Client providing waiver
+  clientEmail   String?
+  waiverType    WaiverType     @default(INFORMED_CONSENT)
+  
+  // Waiver content
+  description   String         // Description of the conflict
+  riskExplanation String       // Explanation of risks
+  clientAcknowledgment String  // Client's acknowledgment
+  
+  // Digital signature
+  signatureData Json?          // Digital signature data
+  signedAt      DateTime?
+  ipAddress     String?        // IP address when signed
+  
+  // Approval
+  approvedById  String
+  approvedBy    User           @relation(fields: [approvedById], references: [id])
+  approvedAt    DateTime       @default(now())
+  
+  // Validity
+  expiresAt     DateTime?      // When waiver expires
+  isActive      Boolean        @default(true)
+  
+  // Organization association
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  metadata      Json?
+  
+  // Audit fields
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("conflict_waivers")
+  @@index([organizationId])
+  @@index([conflictCheckId])
+  @@index([approvedById])
+  @@index([isActive])
+}
+
+// ===== CONFLICT OF INTEREST ENUMS =====
+enum EntityType {
+  PERSON
+  COMPANY
+  ORGANIZATION
+  GOVERNMENT
+  OTHER
+}
+
+enum RelationshipType {
+  BUSINESS
+  PERSONAL
+  FAMILY
+  EMPLOYMENT
+  INVESTMENT
+  LEGAL
+  OPPOSING_PARTY
+  FORMER_CLIENT
+  VENDOR
+  OTHER
+}
+
+enum RelationshipStrength {
+  WEAK
+  MEDIUM
+  STRONG
+  CRITICAL
+}
+
+enum ConflictCheckType {
+  NEW_CASE
+  NEW_CLIENT
+  NEW_MATTER
+  LATERAL_HIRE
+  ROUTINE_CHECK
+  OTHER
+}
+
+enum ConflictStatus {
+  PENDING
+  IN_PROGRESS
+  CLEARED
+  CONFLICT_IDENTIFIED
+  WAIVER_REQUIRED
+  WAIVER_OBTAINED
+  DECLINED
+}
+
+enum ConflictScope {
+  ENTITY_ONLY
+  RELATED_ENTITIES
+  FULL
+}
+
+enum ConflictLevel {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ConflictResolution {
+  PENDING
+  CLEARED
+  WAIVER_OBTAINED
+  CASE_DECLINED
+  CASE_WITHDRAWN
+  REFERRED_OUT
+}
+
+enum WaiverType {
+  INFORMED_CONSENT
+  ADVANCE_WAIVER
+  LIMITED_WAIVER
+  JOINT_REPRESENTATION
+}
+
+// ===== TRUST ACCOUNT MODELS (IOLTA) =====
+model TrustAccount {
+  id                String    @id @default(cuid())
+  accountNumber     String    @unique
+  accountName       String
+  bankName          String
+  routingNumber     String
+  accountType       TrustAccountType @default(IOLTA)
+  
+  // Account details
+  openingDate       DateTime  @default(now())
+  closingDate       DateTime?
+  isActive          Boolean   @default(true)
+  
+  // Interest settings
+  isInterestBearing Boolean   @default(true)
+  interestRate      Float?    // Annual percentage rate
+  minimumBalance    Float     @default(0)
+  
+  // Organization association
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Account managers
+  primarySignatory  String    // User ID
+  signatories       Json      // Array of user IDs who can sign
+  
+  // Settings and restrictions
+  settings          Json?     // Account-specific settings
+  restrictions      Json?     // Any account restrictions
+  
+  // Audit fields
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  transactions      TrustTransaction[]
+  balances          TrustBalance[]
+  ledgerEntries     TrustLedgerEntry[]
+  reconciliations   TrustReconciliation[]
+
+  @@map("trust_accounts")
+  @@index([organizationId])
+  @@index([isActive])
+  @@index([accountNumber])
+}
+
+model TrustTransaction {
+  id                String            @id @default(cuid())
+  transactionNumber String            @unique // Sequential transaction number
+  
+  // Transaction details
+  type              TransactionType
+  amount            Float             // Transaction amount (positive for deposits, negative for withdrawals)
+  currency          String            @default("USD")
+  description       String
+  reference         String?           // External reference (check number, wire reference, etc.)
+  
+  // Associated entities
+  trustAccountId    String
+  trustAccount      TrustAccount      @relation(fields: [trustAccountId], references: [id], onDelete: Cascade)
+  
+  caseId            String?           // Associated case
+  case              Case?             @relation(fields: [caseId], references: [id])
+  
+  clientId          String?           // Associated client (when different from case client)
+  
+  // Transaction timing
+  transactionDate   DateTime          // When transaction occurred
+  effectiveDate     DateTime?         // When transaction takes effect (for future-dated items)
+  clearedDate       DateTime?         // When transaction cleared the bank
+  
+  // Processing status
+  status            TransactionStatus @default(PENDING)
+  
+  // Payment method details
+  paymentMethod     PaymentMethod     @default(CHECK)
+  checkNumber       String?
+  wireDetails       Json?             // Wire transfer details
+  cardDetails       Json?             // Credit card details (tokenized)
+  achDetails        Json?             // ACH details
+  
+  // Authorization and approval
+  authorizedBy      String            // User ID who authorized
+  approvedBy        String?           // User ID who approved (if required)
+  approvedAt        DateTime?
+  
+  // Reconciliation
+  bankStatementDate DateTime?         // Date on bank statement
+  reconciledBy      String?           // User ID who reconciled
+  reconciledAt      DateTime?
+  
+  // Organization association
+  organizationId    String
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  tags              Json?             // Array of tags for categorization
+  notes             String?           // Internal notes
+  attachments       Json?             // Array of attachment references
+  
+  // Audit trail
+  auditTrail        Json?             // Detailed audit trail
+  
+  // Three-way reconciliation
+  purpose           TrustPurpose      @default(CLIENT_ADVANCE)
+  purposeDetails    Json?             // Purpose-specific details
+  
+  // Audit fields
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Relations
+  ledgerEntries     TrustLedgerEntry[]
+
+  @@map("trust_transactions")
+  @@index([organizationId])
+  @@index([trustAccountId])
+  @@index([caseId])
+  @@index([transactionDate])
+  @@index([status])
+  @@index([transactionNumber])
+}
+
+model TrustLedgerEntry {
+  id                String           @id @default(cuid())
+  entryNumber       String           @unique // Sequential ledger entry number
+  
+  // Ledger entry details
+  entryType         LedgerEntryType
+  amount            Float            // Amount (positive for client side, negative for trust side)
+  runningBalance    Float            // Running balance after this entry
+  
+  // Associated records
+  trustAccountId    String
+  trustAccount      TrustAccount     @relation(fields: [trustAccountId], references: [id], onDelete: Cascade)
+  
+  transactionId     String?
+  transaction       TrustTransaction? @relation(fields: [transactionId], references: [id])
+  
+  caseId            String?
+  case              Case?            @relation(fields: [caseId], references: [id])
+  
+  // Client liability tracking
+  clientName        String           // Client this entry affects
+  clientBalance     Float            // Client's balance after this entry
+  
+  // Entry details
+  description       String
+  entryDate         DateTime         @default(now())
+  effectiveDate     DateTime?
+  
+  // Organization association
+  organizationId    String
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Created by
+  createdBy         String           // User ID
+  
+  // Metadata
+  notes             String?
+  tags              Json?
+  
+  // Audit fields
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@map("trust_ledger_entries")
+  @@index([organizationId])
+  @@index([trustAccountId])
+  @@index([caseId])
+  @@index([entryDate])
+  @@index([clientName])
+}
+
+model TrustBalance {
+  id                String       @id @default(cuid())
+  
+  // Balance snapshot
+  snapshotDate      DateTime
+  totalBalance      Float        // Total trust account balance
+  reconciledBalance Float?       // Bank reconciled balance
+  
+  // Account association
+  trustAccountId    String
+  trustAccount      TrustAccount @relation(fields: [trustAccountId], references: [id], onDelete: Cascade)
+  
+  // Client breakdown
+  clientBalances    Json         // Object with client names as keys, balances as values
+  
+  // Balance details
+  pendingDeposits   Float        @default(0)
+  pendingWithdrawals Float       @default(0)
+  clearedBalance    Float        // Actually cleared balance
+  
+  // Interest calculation
+  interestEarned    Float        @default(0)
+  interestPaid      Float        @default(0)
+  
+  // Organization association
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Calculated by
+  calculatedBy      String       // User ID or system
+  calculatedAt      DateTime     @default(now())
+  
+  // Metadata
+  notes             String?
+  
+  // Audit fields
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@map("trust_balances")
+  @@index([organizationId])
+  @@index([trustAccountId])
+  @@index([snapshotDate])
+  @@unique([trustAccountId, snapshotDate])
+}
+
+model TrustReconciliation {
+  id                String              @id @default(cuid())
+  reconciliationNumber String           @unique
+  
+  // Reconciliation period
+  periodStart       DateTime
+  periodEnd         DateTime
+  bankStatementDate DateTime
+  
+  // Account association
+  trustAccountId    String
+  trustAccount      TrustAccount        @relation(fields: [trustAccountId], references: [id], onDelete: Cascade)
+  
+  // Balances
+  bookBalance       Float               // Balance per our records
+  bankBalance       Float               // Balance per bank statement
+  reconciledBalance Float               // Final reconciled balance
+  
+  // Reconciliation items
+  outstandingDeposits Float             @default(0)
+  outstandingChecks  Float             @default(0)
+  bankFees          Float             @default(0)
+  interestEarned    Float             @default(0)
+  adjustments       Json?             // Array of adjustment objects
+  
+  // Status
+  status            ReconciliationStatus @default(IN_PROGRESS)
+  
+  // Discrepancies
+  hasDiscrepancies  Boolean           @default(false)
+  discrepancyAmount Float?
+  discrepancyNotes  String?
+  
+  // Organization association
+  organizationId    String
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Performed by
+  reconciledBy      String            // User ID
+  reviewedBy        String?           // User ID (supervisor review)
+  reviewedAt        DateTime?
+  
+  // Attachments
+  bankStatement     String?           // File path to bank statement
+  attachments       Json?             // Array of attachment references
+  
+  // Metadata
+  notes             String?
+  
+  // Audit fields
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("trust_reconciliations")
+  @@index([organizationId])
+  @@index([trustAccountId])
+  @@index([bankStatementDate])
+  @@index([status])
+}
+
+// ===== TRUST ACCOUNT ENUMS =====
+enum TrustAccountType {
+  IOLTA          // Interest on Lawyers Trust Accounts
+  NON_IOLTA      // Non-interest bearing trust account
+  IOLTA_EXEMPT   // Exempt from IOLTA (large balances)
+  SETTLEMENT     // Settlement fund account
+  OTHER
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  FEE
+  INTEREST
+  ADJUSTMENT
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  AUTHORIZED
+  CLEARED
+  FAILED
+  CANCELLED
+  RECONCILED
+}
+
+enum PaymentMethod {
+  CHECK
+  WIRE_TRANSFER
+  ACH
+  CREDIT_CARD
+  CASH
+  MONEY_ORDER
+  CASHIERS_CHECK
+  OTHER
+}
+
+enum TrustPurpose {
+  CLIENT_ADVANCE       // Advance for legal fees
+  SETTLEMENT_FUNDS     // Settlement proceeds
+  COURT_DEPOSIT        // Court ordered deposit
+  THIRD_PARTY_FUNDS    // Third party funds held
+  EXPENSE_ADVANCE      // Advance for costs/expenses
+  RETAINER             // Traditional retainer
+  OTHER
+}
+
+enum LedgerEntryType {
+  DEPOSIT              // Funds deposited to trust
+  WITHDRAWAL           // Funds withdrawn from trust
+  TRANSFER_IN          // Transfer from another account
+  TRANSFER_OUT         // Transfer to another account
+  EARNED_FEES          // Fees earned and transferred out
+  COST_PAYMENT         // Payment of client costs
+  INTEREST_CREDIT      // Interest earned
+  BANK_FEE             // Bank fees charged
+  ADJUSTMENT           // Adjustment entry
+}
+
+enum ReconciliationStatus {
+  IN_PROGRESS
+  COMPLETED
+  DISCREPANCY
+  REVIEWED
+  APPROVED
+}
+
+// ===== COURT RULES AND DEADLINES MODELS =====
+model Jurisdiction {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "Federal District Court", "California Superior Court"
+  type        JurisdictionType
+  code        String   @unique // e.g., "CA-SD", "USDC-SD"
+  
+  // Geographic information
+  state       String?  // State code (e.g., "CA", "NY")
+  county      String?  // County name
+  district    String?  // Federal district or other subdivision
+  country     String   @default("US")
+  
+  // Court information
+  courtName   String?  // Full court name
+  courtType   CourtLevel @default(TRIAL)
+  address     String?
+  phone       String?
+  website     String?
+  
+  // Administrative details
+  timeZone    String   @default("UTC")
+  businessHours Json?  // Court business hours
+  filingMethods Json?  // Electronic filing, paper, etc.
+  
+  // Settings
+  isActive    Boolean  @default(true)
+  settings    Json?    // Court-specific settings
+  
+  // Audit fields
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  courtRules  CourtRule[]
+  cases       Case[]    @relation("CaseJurisdiction")
+  deadlines   Deadline[] @relation("DeadlineJurisdiction")
+  
+  @@map("jurisdictions")
+  @@index([type])
+  @@index([state])
+  @@index([code])
+}
+
+model CourtRule {
+  id            String      @id @default(cuid())
+  ruleNumber    String      // e.g., "Rule 26", "CCP 415.10"
+  title         String
+  description   String?
+  fullText      String?     // Complete rule text
+  
+  // Rule categorization
+  category      RuleCategory @default(GENERAL)
+  subcategory   String?
+  ruleType      RuleType     @default(PROCEDURAL)
+  
+  // Jurisdiction
+  jurisdictionId String
+  jurisdiction   Jurisdiction @relation(fields: [jurisdictionId], references: [id], onDelete: Cascade)
+  
+  // Time limits and deadlines
+  timeLimit     Int?        // Default time limit in days
+  timeLimitUnit TimeUnit    @default(DAYS)
+  
+  // Calculation rules
+  calculationRules Json?     // Complex calculation logic
+  exceptions       Json?     // Exceptions to the rule
+  
+  // Dependencies
+  triggers      Json?       // What events trigger this rule
+  dependencies  Json?       // Other rules this depends on
+  
+  // Content and references
+  citations     Json?       // Legal citations
+  amendments    Json?       // Amendment history
+  relatedRules  Json?       // Related rule references
+  
+  // Effective dates
+  effectiveDate DateTime?
+  expirationDate DateTime?
+  isActive      Boolean     @default(true)
+  
+  // Metadata
+  priority      RulePriority @default(MEDIUM)
+  tags          Json?       // Array of tags
+  notes         String?
+  
+  // Audit fields
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Relations
+  deadlineTemplates DeadlineTemplate[]
+  automatedDeadlines AutomatedDeadline[]
+  
+  @@map("court_rules")
+  @@index([jurisdictionId])
+  @@index([category])
+  @@index([ruleType])
+  @@index([ruleNumber])
+  @@unique([jurisdictionId, ruleNumber])
+}
+
+model DeadlineTemplate {
+  id              String        @id @default(cuid())
+  name            String
+  description     String?
+  
+  // Template definition
+  triggerEvent    TriggerEvent  // What triggers this deadline
+  timeLimit       Int           // Time limit value
+  timeLimitUnit   TimeUnit      @default(DAYS)
+  
+  // Calculation settings
+  calculationMethod CalcMethod  @default(CALENDAR_DAYS)
+  includeWeekends   Boolean     @default(true)
+  includeHolidays   Boolean     @default(true)
+  businessDaysOnly  Boolean     @default(false)
+  
+  // Court rule association
+  courtRuleId     String?
+  courtRule       CourtRule?    @relation(fields: [courtRuleId], references: [id])
+  
+  // Jurisdiction (can be independent of court rule)
+  jurisdictionId  String?
+  jurisdiction    Jurisdiction? @relation(fields: [jurisdictionId], references: [id])
+  
+  // Deadline properties
+  deadlineType    DeadlineType  @default(FILING)
+  priority        Priority      @default(MEDIUM)
+  isExtendable    Boolean       @default(false)
+  maxExtensions   Int?          // Maximum number of extensions allowed
+  
+  // Notification settings
+  reminderDays    Int[]         // Days before deadline to send reminders
+  isRecurring     Boolean       @default(false)
+  
+  // Content
+  instructions    String?       // What needs to be done
+  requirements    Json?         // Requirements for completion
+  forms           Json?         // Required forms
+  
+  // Conditions
+  conditions      Json?         // Conditions when this template applies
+  exceptions      Json?         // Exceptions to this template
+  
+  // Settings
+  isActive        Boolean       @default(true)
+  isDefault       Boolean       @default(false)
+  
+  // Audit fields
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  automatedDeadlines AutomatedDeadline[]
+  
+  @@map("deadline_templates")
+  @@index([triggerEvent])
+  @@index([deadlineType])
+  @@index([jurisdictionId])
+  @@index([courtRuleId])
+}
+
+model AutomatedDeadline {
+  id                String            @id @default(cuid())
+  
+  // Source information
+  templateId        String?
+  template          DeadlineTemplate? @relation(fields: [templateId], references: [id])
+  
+  courtRuleId       String?
+  courtRule         CourtRule?        @relation(fields: [courtRuleId], references: [id])
+  
+  // Case association
+  caseId            String
+  case              Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  // Deadline details
+  title             String
+  description       String?
+  triggerEvent      TriggerEvent
+  triggerDate       DateTime          // Date the triggering event occurred
+  dueDate           DateTime          // Calculated due date
+  
+  // Calculation details
+  originalDays      Int               // Original time limit in days
+  actualDays        Int               // Actual calculated days (accounting for weekends, holidays)
+  calculationMethod CalcMethod
+  
+  // Status
+  status            AutoDeadlineStatus @default(PENDING)
+  
+  // Manual overrides
+  isManualOverride  Boolean           @default(false)
+  overrideReason    String?
+  overriddenBy      String?           // User ID
+  overriddenAt      DateTime?
+  
+  // Completion tracking
+  completedAt       DateTime?
+  completedBy       String?           // User ID
+  completionNotes   String?
+  
+  // Extensions
+  extensionCount    Int               @default(0)
+  extensionHistory  Json?             // Array of extension records
+  
+  // Notifications
+  notificationsSent Json?             // Track sent notifications
+  lastReminderSent  DateTime?
+  
+  // Compliance
+  wasCompliantlyMet Boolean?          // Whether deadline was met on time
+  complianceNotes   String?
+  
+  // Audit fields
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Relations
+  deadline          Deadline?         @relation(fields: [deadlineId], references: [id])
+  deadlineId        String?
+  
+  @@map("automated_deadlines")
+  @@index([caseId])
+  @@index([triggerEvent])
+  @@index([dueDate])
+  @@index([status])
+  @@index([templateId])
+}
+
+model Holiday {
+  id          String      @id @default(cuid())
+  name        String
+  date        DateTime    // Date of the holiday
+  year        Int         // Year for recurring holidays
+  
+  // Holiday details
+  type        HolidayType @default(FEDERAL)
+  isRecurring Boolean     @default(true)
+  
+  // Jurisdiction applicability
+  jurisdictions Json?     // Array of jurisdiction IDs where this holiday applies
+  states        Json?     // Array of state codes
+  counties      Json?     // Array of county names
+  
+  // Court impact
+  affectsCourts   Boolean @default(true)
+  affectsFilings  Boolean @default(true)
+  affectsService  Boolean @default(false)
+  
+  // Description
+  description     String?
+  observedDate    DateTime? // If different from actual date
+  
+  // Settings
+  isActive        Boolean @default(true)
+  
+  // Audit fields
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("holidays")
+  @@index([date])
+  @@index([type])
+  @@index([year])
+  @@unique([name, date])
+}
+
+model DeadlineCalculation {
+  id                String      @id @default(cuid())
+  
+  // Input parameters
+  triggerDate       DateTime
+  timeLimit         Int
+  timeLimitUnit     TimeUnit
+  calculationMethod CalcMethod
+  
+  // Calculation settings
+  includeWeekends   Boolean
+  includeHolidays   Boolean
+  businessDaysOnly  Boolean
+  
+  // Jurisdiction for holiday rules
+  jurisdictionId    String?
+  jurisdiction      Jurisdiction? @relation(fields: [jurisdictionId], references: [id])
+  
+  // Results
+  calculatedDate    DateTime
+  actualDays        Int         // Days actually counted
+  skippedDays       Int         // Days skipped (weekends, holidays)
+  skippedDetails    Json?       // Details of what was skipped
+  
+  // Audit and debugging
+  calculationSteps  Json?       // Step-by-step calculation log
+  warnings          Json?       // Any warnings during calculation
+  
+  // Metadata
+  caseId            String?     // Associated case if applicable
+  ruleId            String?     // Associated rule if applicable
+  notes             String?
+  
+  // Audit fields
+  createdAt         DateTime    @default(now())
+  
+  @@map("deadline_calculations")
+  @@index([triggerDate])
+  @@index([calculatedDate])
+  @@index([jurisdictionId])
+  @@index([caseId])
+}
+
+// ===== COURT RULES ENUMS =====
+enum JurisdictionType {
+  FEDERAL_DISTRICT
+  FEDERAL_APPEALS
+  FEDERAL_SUPREME
+  STATE_SUPREME
+  STATE_APPEALS
+  STATE_TRIAL
+  STATE_MUNICIPAL
+  STATE_COUNTY
+  ADMINISTRATIVE
+  BANKRUPTCY
+  TAX_COURT
+  IMMIGRATION
+  OTHER
+}
+
+enum CourtLevel {
+  TRIAL
+  APPEALS
+  SUPREME
+  ADMINISTRATIVE
+  SPECIALTY
+}
+
+enum RuleCategory {
+  PROCEDURAL
+  EVIDENCE
+  DISCOVERY
+  MOTION_PRACTICE
+  TRIAL_PRACTICE
+  APPEAL_PRACTICE
+  CRIMINAL
+  CIVIL
+  FAMILY
+  PROBATE
+  ADMINISTRATIVE
+  LOCAL_RULES
+  GENERAL
+  OTHER
+}
+
+enum RuleType {
+  PROCEDURAL
+  SUBSTANTIVE
+  ADMINISTRATIVE
+  LOCAL
+  PRACTICE_GUIDE
+  FORM
+  OTHER
+}
+
+enum TimeUnit {
+  MINUTES
+  HOURS
+  DAYS
+  WEEKS
+  MONTHS
+  YEARS
+}
+
+enum RulePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TriggerEvent {
+  CASE_FILED
+  SERVICE_COMPLETED
+  ANSWER_DUE
+  DISCOVERY_OPENED
+  MOTION_FILED
+  HEARING_SCHEDULED
+  JUDGMENT_ENTERED
+  APPEAL_FILED
+  NOTICE_SERVED
+  SUMMONS_ISSUED
+  COMPLAINT_FILED
+  RESPONSE_DUE
+  TRIAL_DATE_SET
+  SETTLEMENT_CONFERENCE
+  CASE_MANAGEMENT_CONFERENCE
+  STATUS_CONFERENCE
+  CUSTOM_EVENT
+  OTHER
+}
+
+enum CalcMethod {
+  CALENDAR_DAYS      // Count all days
+  BUSINESS_DAYS      // Skip weekends
+  COURT_DAYS         // Skip weekends and court holidays
+  CUSTOM             // Custom calculation logic
+}
+
+enum AutoDeadlineStatus {
+  PENDING            // Not yet due
+  DUE_SOON           // Due within warning period
+  OVERDUE            // Past due date
+  COMPLETED          // Completed on time
+  COMPLETED_LATE     // Completed but after due date
+  EXTENDED           // Extension granted
+  WAIVED             // Waived or dismissed
+  CANCELLED          // No longer applicable
+}
+
+enum HolidayType {
+  FEDERAL
+  STATE
+  COUNTY
+  COURT_SPECIFIC
+  RELIGIOUS
+  CULTURAL
+  CUSTOM
+}
+
+// ===== CLIENT INTAKE & CRM MODELS =====
+model Lead {
+  id                String     @id @default(cuid())
+  
+  // Contact information
+  firstName         String
+  lastName          String
+  fullName          String     // computed field for search
+  email             String
+  phone             String?
+  alternatePhone    String?
+  
+  // Address
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?
+  country           String     @default("US")
+  
+  // Lead details
+  source            LeadSource @default(WEBSITE)
+  sourceDetails     String?    // Campaign, referral person, etc.
+  legalIssue        String?    // Brief description of legal issue
+  urgency           Priority   @default(MEDIUM)
+  estimatedValue    Float?     // Potential case value
+  
+  // Status tracking
+  status            LeadStatus @default(NEW)
+  qualificationStatus QualificationStatus @default(UNQUALIFIED)
+  
+  // Assignment
+  assignedToId      String?
+  assignedTo        User?      @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  assignedAt        DateTime?
+  
+  // Follow-up tracking
+  lastContactDate   DateTime?
+  nextFollowUpDate  DateTime?
+  contactAttempts   Int        @default(0)
+  
+  // Conversion tracking
+  convertedToCaseId String?    @unique
+  convertedToCase   Case?      @relation("ConvertedFromLead", fields: [convertedToCaseId], references: [id])
+  convertedAt       DateTime?
+  convertedBy       String?    // User ID
+  
+  // Organization
+  organizationId    String
+  organization      Organization @relation("LeadOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Marketing tracking
+  marketingData     Json?      // UTM parameters, campaign data, etc.
+  
+  // Metadata
+  tags              Json?      // Array of tags
+  notes             String?
+  customFields      Json?      // Flexible custom fields
+  
+  // Audit fields
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  
+  // Relations
+  activities        LeadActivity[]
+  intakeResponses   IntakeResponse[]
+  communications    Communication[]
+  
+  @@map("leads")
+  @@index([organizationId])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([email])
+  @@index([createdAt])
+  @@index([source])
+}
+
+model LeadActivity {
+  id          String         @id @default(cuid())
+  
+  // Activity details
+  type        ActivityType
+  subject     String
+  description String?
+  outcome     ActivityOutcome @default(COMPLETED)
+  
+  // Timing
+  scheduledAt DateTime?      // When activity was scheduled
+  completedAt DateTime?      // When activity was completed
+  duration    Int?           // Duration in minutes
+  
+  // Lead association
+  leadId      String
+  lead        Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  // User who performed activity
+  performedById String
+  performedBy   User         @relation("ActivityPerformer", fields: [performedById], references: [id])
+  
+  // Follow-up
+  followUpRequired Boolean    @default(false)
+  followUpDate     DateTime?
+  followUpNotes    String?
+  
+  // Metadata
+  priority    Priority       @default(MEDIUM)
+  tags        Json?          // Array of tags
+  attachments Json?          // Array of file references
+  
+  // Audit fields
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  @@map("lead_activities")
+  @@index([leadId])
+  @@index([performedById])
+  @@index([type])
+  @@index([scheduledAt])
+  @@index([completedAt])
+}
+
+model IntakeForm {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?
+  
+  // Form configuration
+  isActive        Boolean         @default(true)
+  isDefault       Boolean         @default(false)
+  version         String          @default("1.0")
+  
+  // Form structure
+  sections        Json            // Array of form sections
+  fields          Json            // Array of form fields with validation
+  
+  // Legal practice area
+  practiceAreas   Json?           // Array of practice areas this form applies to
+  caseTypes       Json?           // Array of case types
+  
+  // Workflow settings
+  autoAssignmentRules Json?        // Rules for auto-assigning leads
+  notificationSettings Json?       // Email/SMS notification settings
+  followUpTemplate    Json?        // Automated follow-up sequences
+  
+  // Organization
+  organizationId  String
+  organization    Organization    @relation("IntakeFormOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  tags            Json?           // Array of tags
+  settings        Json?           // Additional form settings
+  
+  // Audit fields
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  createdBy       String          // User ID
+  
+  // Relations
+  responses       IntakeResponse[]
+  
+  @@map("intake_forms")
+  @@index([organizationId])
+  @@index([isActive])
+  @@index([isDefault])
+}
+
+model IntakeResponse {
+  id              String      @id @default(cuid())
+  
+  // Form association
+  intakeFormId    String
+  intakeForm      IntakeForm  @relation(fields: [intakeFormId], references: [id])
+  
+  // Lead association
+  leadId          String?
+  lead            Lead?       @relation(fields: [leadId], references: [id])
+  
+  // Response data
+  responses       Json        // Complete form responses
+  score           Int?        // Qualification score (0-100)
+  
+  // Status
+  status          ResponseStatus @default(DRAFT)
+  reviewStatus    ReviewStatus   @default(PENDING)
+  
+  // Review process
+  reviewedById    String?
+  reviewedBy      User?       @relation("ResponseReviewer", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
+  reviewNotes     String?
+  
+  // Submission details
+  submittedAt     DateTime?
+  ipAddress       String?
+  userAgent       String?
+  source          String?     // How they found the form
+  
+  // Follow-up
+  needsFollowUp   Boolean     @default(false)
+  followUpNotes   String?
+  
+  // Organization
+  organizationId  String
+  organization    Organization @relation("IntakeResponseOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  metadata        Json?       // Additional response metadata
+  
+  // Audit fields
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@map("intake_responses")
+  @@index([intakeFormId])
+  @@index([leadId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([submittedAt])
+}
+
+model Communication {
+  id              String            @id @default(cuid())
+  
+  // Communication details
+  type            CommunicationType
+  direction       CommunicationDirection
+  subject         String?
+  content         String
+  
+  // Participants
+  fromEmail       String?
+  fromPhone       String?
+  fromName        String?
+  
+  toEmail         String?
+  toPhone         String?
+  toName          String?
+  
+  // Lead/Case association
+  leadId          String?
+  lead            Lead?             @relation(fields: [leadId], references: [id])
+  
+  caseId          String?
+  case            Case?             @relation("CaseCommunications", fields: [caseId], references: [id])
+  
+  // User who handled communication
+  handledById     String?
+  handledBy       User?             @relation("CommunicationHandler", fields: [handledById], references: [id])
+  
+  // Status and tracking
+  status          CommunicationStatus @default(SENT)
+  readAt          DateTime?
+  respondedAt     DateTime?
+  
+  // Email/SMS specific
+  messageId       String?           // External message ID
+  threadId        String?           // Email thread ID
+  campaignId      String?           // Marketing campaign ID
+  
+  // Attachments
+  attachments     Json?             // Array of attachment references
+  
+  // Organization
+  organizationId  String
+  organization    Organization      @relation("CommunicationOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  metadata        Json?             // Platform-specific metadata
+  tags            Json?             // Array of tags
+  
+  // Audit fields
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  @@map("communications")
+  @@index([leadId])
+  @@index([caseId])
+  @@index([organizationId])
+  @@index([type])
+  @@index([direction])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ClientProfile {
+  id                String      @id @default(cuid())
+  
+  // Basic information
+  type              ClientType  @default(INDIVIDUAL)
+  firstName         String?     // For individuals
+  lastName          String?     // For individuals
+  middleName        String?
+  companyName       String?     // For businesses
+  displayName       String      // Computed display name
+  
+  // Contact information
+  primaryEmail      String
+  secondaryEmail    String?
+  primaryPhone      String?
+  secondaryPhone    String?
+  fax               String?
+  
+  // Address information
+  mailingAddress    String?
+  mailingCity       String?
+  mailingState      String?
+  mailingZipCode    String?
+  mailingCountry    String      @default("US")
+  
+  physicalAddress   String?
+  physicalCity      String?
+  physicalState     String?
+  physicalZipCode   String?
+  physicalCountry   String      @default("US")
+  
+  // Individual specific
+  dateOfBirth       DateTime?
+  ssn               String?     // Encrypted
+  driversLicense    String?
+  occupation        String?
+  employer          String?
+  
+  // Business specific
+  ein               String?     // Employer Identification Number
+  businessType      String?     // LLC, Corp, Partnership, etc.
+  industry          String?
+  website           String?
+  
+  // Emergency contact
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  emergencyContactRelation String?
+  
+  // Legal information
+  preferredLanguage String      @default("en")
+  communicationPreference CommunicationPreference @default(EMAIL)
+  
+  // Organization
+  organizationId    String
+  organization      Organization @relation("ClientProfileOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Status
+  isActive          Boolean     @default(true)
+  clientSince       DateTime    @default(now())
+  
+  // Metadata
+  tags              Json?       // Array of tags
+  customFields      Json?       // Flexible custom fields
+  notes             String?
+  
+  // Audit fields
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  createdBy         String      // User ID
+  
+  // Relations
+  cases             Case[]      @relation("ClientCases")
+  
+  @@map("client_profiles")
+  @@index([organizationId])
+  @@index([type])
+  @@index([primaryEmail])
+  @@index([displayName])
+  @@index([clientSince])
+}
+
+// ===== CLIENT INTAKE & CRM ENUMS =====
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  GOOGLE_ADS
+  SOCIAL_MEDIA
+  PHONE_CALL
+  EMAIL
+  WALK_IN
+  EVENT
+  DIRECTORY
+  PREVIOUS_CLIENT
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATING
+  CONVERTED
+  LOST
+  DISQUALIFIED
+}
+
+enum QualificationStatus {
+  UNQUALIFIED
+  QUALIFIED
+  HOT_LEAD
+  WARM_LEAD
+  COLD_LEAD
+}
+
+enum ActivityType {
+  PHONE_CALL
+  EMAIL
+  MEETING
+  FOLLOW_UP
+  PROPOSAL
+  CONTRACT_REVIEW
+  CONSULTATION
+  DOCUMENT_REVIEW
+  RESEARCH
+  COURT_APPEARANCE
+  OTHER
+}
+
+enum ActivityOutcome {
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+  NO_SHOW
+  IN_PROGRESS
+}
+
+enum ResponseStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+  PROCESSED
+  ARCHIVED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_MORE_INFO
+}
+
+enum CommunicationType {
+  EMAIL
+  PHONE_CALL
+  SMS
+  POSTAL_MAIL
+  MEETING
+  VIDEO_CALL
+  CHAT
+  SOCIAL_MEDIA
+}
+
+enum CommunicationDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CommunicationStatus {
+  DRAFT
+  SENT
+  DELIVERED
+  READ
+  RESPONDED
+  FAILED
+  BOUNCED
+}
+
+enum ClientType {
+  INDIVIDUAL
+  BUSINESS
+  NONPROFIT
+  GOVERNMENT
+  OTHER
+}
+
+enum CommunicationPreference {
+  EMAIL
+  PHONE
+  SMS
+  POSTAL_MAIL
+  IN_PERSON
+}
+
 
