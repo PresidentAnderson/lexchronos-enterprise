@@ -76,3 +76,28 @@ export class AuthService {
     return authorization.substring(7)
   }
 }
+
+// Export convenience functions for backward compatibility
+export const hashPassword = AuthService.hashPassword
+export const verifyPassword = AuthService.verifyPassword
+export const generateToken = AuthService.generateToken
+export const verifyToken = AuthService.verifyToken
+export const generateRefreshToken = AuthService.generateRefreshToken
+export const verifyRefreshToken = AuthService.verifyRefreshToken
+export const extractTokenFromHeader = AuthService.extractTokenFromHeader
+
+// Alias for common use cases
+export const verifyAccessToken = AuthService.verifyToken
+export const generateAccessToken = AuthService.generateToken
+
+// Export auth middleware wrapper for API routes
+export async function auth(req: Request): Promise<JWTPayload | null> {
+  const authHeader = req.headers.get('authorization')
+  const token = AuthService.extractTokenFromHeader(authHeader || '')
+  
+  if (!token) {
+    return null
+  }
+  
+  return AuthService.verifyToken(token)
+}

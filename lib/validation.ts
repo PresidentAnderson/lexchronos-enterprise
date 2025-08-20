@@ -189,3 +189,35 @@ export function calculatePasswordStrength(password: string): {
 
   return { score, feedback }
 }
+
+// Generic request validation function
+export async function validateRequest<T>(
+  schema: z.ZodSchema<T>,
+  data: unknown
+): Promise<{ success: true; data: T } | { success: false; errors: z.ZodError }> {
+  try {
+    const validatedData = await schema.parseAsync(data)
+    return { success: true, data: validatedData }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, errors: error }
+    }
+    throw error
+  }
+}
+
+// Synchronous version of validateRequest
+export function validateRequestSync<T>(
+  schema: z.ZodSchema<T>,
+  data: unknown
+): { success: true; data: T } | { success: false; errors: z.ZodError } {
+  try {
+    const validatedData = schema.parse(data)
+    return { success: true, data: validatedData }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { success: false, errors: error }
+    }
+    throw error
+  }
+}
