@@ -83,7 +83,7 @@ export async function GET(
     // Log download access
     console.log(`Document downloaded: ${document.id} (${document.originalName}) by user request`);
 
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(new Uint8Array(fileBuffer), {
       status: 200,
       headers
     });
