@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
     for (const notificationData of notifications) {
       try {
         const notification = await prisma.notification.create({
-          data: notificationData,
+          data: notificationData as any,
           include: {
             user: {
               select: {
