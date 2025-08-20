@@ -366,8 +366,8 @@ export async function GET(request: NextRequest) {
         totalDeadlines: preview.deadlineReminders.length,
         totalCourtDates: preview.courtDateReminders.length,
         urgentItems: [
-          ...preview.deadlineReminders.filter(d => d.priority === 'URGENT'),
-          ...preview.courtDateReminders.filter(c => c.priority === 'URGENT')
+          ...(preview as any).deadlineReminders.filter((d: any) => d.priority === 'URGENT'),
+          ...(preview as any).courtDateReminders.filter((c: any) => c.priority === 'URGENT')
         ].length
       }
     });
