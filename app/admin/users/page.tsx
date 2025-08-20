@@ -118,6 +118,7 @@ export default function UsersManagement() {
     const newUser = {
       id: `user-${users.length + 1}`,
       ...newUserForm,
+      firmId: newUserForm.firmId || `firm-${users.length + 1}`,
       firmName: 'New Law Firm',
       isActive: true,
       lastLogin: undefined,
