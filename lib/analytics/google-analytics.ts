@@ -168,3 +168,90 @@ export const setUserProperties = (properties: {
     });
   }
 };
+
+// GoogleAnalytics class for provider compatibility
+export class GoogleAnalytics {
+  private static isInitialized = false;
+  private static trackingId = '';
+
+  static initialize(trackingId: string) {
+    if (typeof window === 'undefined') return;
+    
+    this.trackingId = trackingId;
+    
+    // Load gtag script
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${trackingId}`;
+    document.head.appendChild(script);
+
+    // Initialize gtag
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function (...args: any[]) {
+      (window.dataLayer = window.dataLayer || []).push(args);
+    };
+    
+    window.gtag('js', new Date());
+    window.gtag('config', trackingId, {
+      page_title: document.title,
+      page_location: window.location.href,
+      send_page_view: true,
+      anonymize_ip: true,
+      cookie_flags: 'SameSite=Strict;Secure'
+    });
+
+    this.isInitialized = true;
+    console.log('✅ Google Analytics initialized');
+  }
+
+  static trackEvent(eventName: string, properties?: Record<string, any>) {
+    if (typeof window === 'undefined' || !window.gtag) return;
+
+    window.gtag('event', eventName, {
+      event_category: properties?.category || 'general',
+      event_label: properties?.label,
+      value: properties?.value,
+      ...properties
+    });
+  }
+
+  static trackPageView(path: string, title?: string) {
+    if (typeof window === 'undefined' || !window.gtag) return;
+
+    window.gtag('config', this.trackingId, {
+      page_path: path,
+      page_title: title || document.title
+    });
+  }
+
+  static trackConversion(conversionName: string, value?: number) {
+    if (typeof window === 'undefined' || !window.gtag) return;
+
+    window.gtag('event', 'conversion', {
+      send_to: `${this.trackingId}/${conversionName}`,
+      value: value || 0,
+      currency: 'USD'
+    });
+  }
+
+  static setUserId(userId: string) {
+    if (typeof window === 'undefined' || !window.gtag) return;
+
+    window.gtag('config', this.trackingId, {
+      user_id: userId
+    });
+  }
+
+  static trackLegalEvent(
+    action: string,
+    category: LegalEventCategory,
+    label?: string,
+    value?: number,
+    customParameters?: Record<string, any>
+  ) {
+    return trackLegalEvent(action, category, label, value, customParameters);
+  }
+}
+
+// Export both named export and default export for compatibility
+export default GoogleAnalytics;

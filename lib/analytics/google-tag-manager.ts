@@ -267,3 +267,53 @@ export const trackPerformance = (performanceData: {
     largest_contentful_paint: performanceData.largest_contentful_paint
   });
 };
+
+// GoogleTagManager class for provider compatibility
+export class GoogleTagManager {
+  private static isInitialized = false;
+  private static containerId = '';
+
+  static initialize(containerId: string) {
+    if (typeof window === 'undefined') return;
+    
+    this.containerId = containerId;
+    
+    // Load GTM script
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtm.js?id=${containerId}`;
+    document.head.appendChild(script);
+
+    // Initialize data layer
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      'gtm.start': new Date().getTime(),
+      event: 'gtm.js'
+    });
+
+    this.isInitialized = true;
+    console.log('✅ Google Tag Manager initialized');
+  }
+
+  static trackPageView(path: string, title?: string) {
+    if (typeof window === 'undefined' || !window.dataLayer) return;
+
+    pushToDataLayer({
+      event: 'page_view',
+      page_path: path,
+      page_title: title || document.title
+    });
+  }
+
+  static trackEvent(eventName: string, properties?: Record<string, any>) {
+    if (typeof window === 'undefined' || !window.dataLayer) return;
+
+    pushToDataLayer({
+      event: eventName,
+      ...properties
+    });
+  }
+}
+
+// Export both named export and default export for compatibility
+export default GoogleTagManager;

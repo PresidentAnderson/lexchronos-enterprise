@@ -320,3 +320,51 @@ const calculateEngagementScore = (data: any): number => {
   if (data.help_accessed === 0) score += 10; // No help needed indicates good UX
   return Math.min(score, 100);
 };
+
+// MicrosoftClarity class for provider compatibility
+export class MicrosoftClarity {
+  private static isInitialized = false;
+  private static projectId = '';
+
+  static initialize(projectId: string) {
+    if (typeof window === 'undefined') return;
+    
+    this.projectId = projectId;
+    
+    // Load Microsoft Clarity script
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.async = true;
+    script.src = 'https://www.clarity.ms/tag/' + projectId;
+    document.head.appendChild(script);
+
+    // Initialize Clarity
+    window.clarity = window.clarity || function (...args: any[]) {
+      (window.clarity.q = window.clarity.q || []).push(args);
+    };
+
+    this.isInitialized = true;
+    console.log('✅ Microsoft Clarity initialized');
+  }
+
+  static trackEvent(eventName: string, properties?: Record<string, any>) {
+    if (typeof window === 'undefined' || !window.clarity) return;
+
+    window.clarity('event', eventName, properties);
+  }
+
+  static identifyUser(userId: string, sessionId?: string, customTags?: Record<string, string>) {
+    if (typeof window === 'undefined' || !window.clarity) return;
+
+    window.clarity('identify', userId, sessionId, customTags);
+  }
+
+  static setCustomTags(tags: Record<string, string>) {
+    if (typeof window === 'undefined' || !window.clarity) return;
+
+    window.clarity('set', tags);
+  }
+}
+
+// Export both named export and default export for compatibility
+export default MicrosoftClarity;

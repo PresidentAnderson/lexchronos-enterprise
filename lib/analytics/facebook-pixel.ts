@@ -321,3 +321,56 @@ export const setupConversionsAPI = () => {
   // for enhanced tracking reliability post iOS 14.5
   console.log('Conversions API should be implemented server-side');
 };
+
+// FacebookPixel class for provider compatibility
+export class FacebookPixel {
+  private static isInitialized = false;
+  private static pixelId = '';
+
+  static initialize(pixelId: string) {
+    if (typeof window === 'undefined') return;
+    
+    this.pixelId = pixelId;
+    
+    // Load Facebook Pixel script
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+    document.head.appendChild(script);
+
+    // Initialize the pixel
+    window.fbq = window.fbq || function (...args: any[]) {
+      (window.fbq.q = window.fbq.q || []).push(args);
+    };
+    window._fbq = window._fbq || window.fbq;
+    window.fbq.push = window.fbq;
+    window.fbq.loaded = true;
+    window.fbq.version = '2.0';
+    window.fbq.queue = [];
+    
+    // Initialize pixel with ID
+    window.fbq('init', pixelId);
+    window.fbq('track', 'PageView');
+
+    this.isInitialized = true;
+    console.log('✅ Facebook Pixel initialized');
+  }
+
+  static trackEvent(eventName: string, properties?: Record<string, any>) {
+    if (typeof window === 'undefined' || !window.fbq) return;
+
+    window.fbq('track', eventName, properties);
+  }
+
+  static trackConversion(conversionName: string, value?: number) {
+    if (typeof window === 'undefined' || !window.fbq) return;
+
+    window.fbq('track', conversionName, {
+      value: value || 0,
+      currency: 'USD'
+    });
+  }
+}
+
+// Export both named export and default export for compatibility
+export default FacebookPixel;
