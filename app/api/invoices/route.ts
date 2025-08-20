@@ -64,13 +64,13 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate totals
-    const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.total, 0);
+    const totalAmount = invoices.reduce((sum: number, invoice) => sum + invoice.total, 0);
     const paidAmount = invoices
       .filter(invoice => invoice.status === 'PAID')
-      .reduce((sum, invoice) => sum + invoice.total, 0);
+      .reduce((sum: number, invoice) => sum + invoice.total, 0);
     const outstandingAmount = invoices
       .filter(invoice => ['SENT', 'OVERDUE'].includes(invoice.status))
-      .reduce((sum, invoice) => sum + invoice.total, 0);
+      .reduce((sum: number, invoice) => sum + invoice.total, 0);
 
     return NextResponse.json({
       success: true,
