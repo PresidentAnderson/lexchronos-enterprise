@@ -96,7 +96,7 @@ export const trackLegalEvent = (
 
 // GoogleAnalytics class for provider compatibility
 export class GoogleAnalytics {
-  static initialize() {
+  static initialize(trackingId?: string) {
     return initGA();
   }
 
@@ -124,6 +124,61 @@ export class GoogleAnalytics {
     customParameters?: Record<string, any>
   ) {
     return trackLegalEvent(action, category, label, value, customParameters);
+  }
+
+  // Additional methods for legal analytics compatibility
+  static trackCaseCreation(caseType: string, practiceArea: string, clientTier: string) {
+    return trackEvent('case_created', {
+      case_type: caseType,
+      practice_area: practiceArea,
+      client_tier: clientTier
+    });
+  }
+
+  static trackDocumentUpload(documentType: string, fileSize: number, caseId?: string) {
+    return trackEvent('document_uploaded', {
+      document_type: documentType,
+      file_size: fileSize,
+      case_id: caseId
+    });
+  }
+
+  static trackTimeEntry(minutes: number, practiceArea: string, billableType: string) {
+    return trackEvent('time_entry_logged', {
+      minutes: minutes,
+      practice_area: practiceArea,
+      billable_type: billableType
+    });
+  }
+
+  static trackBilling(amount: number, clientId: string, paymentMethod: string) {
+    return trackEvent('billing_processed', {
+      amount: amount,
+      client_id: clientId,
+      payment_method: paymentMethod
+    });
+  }
+
+  static trackCourtDate(eventType: string, daysUntil: number) {
+    return trackEvent('court_event_scheduled', {
+      event_type: eventType,
+      days_until: daysUntil
+    });
+  }
+
+  static trackClientInteraction(interactionType: string, duration?: number) {
+    return trackEvent('client_interaction', {
+      interaction_type: interactionType,
+      duration: duration
+    });
+  }
+
+  static setUserProperties(properties: Record<string, any>) {
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('config', GA_TRACKING_ID, {
+        custom_map: properties
+      });
+    }
   }
 }
 

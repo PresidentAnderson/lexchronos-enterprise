@@ -88,6 +88,15 @@ export const initializeAnalytics = () => {
 
 // Unified legal event tracking
 export class LegalAnalytics {
+  static initialize(config: {
+    firmName?: string;
+    firmId?: string;
+    practiceAreas?: string[];
+    environment?: string;
+  }) {
+    // Initialize LegalAnalytics with configuration
+    console.log('✅ LegalAnalytics initialized with config:', config);
+  }
   static trackCaseCreated(caseData: CaseData) {
     // Google Analytics
     GoogleAnalytics.trackCaseCreation(
