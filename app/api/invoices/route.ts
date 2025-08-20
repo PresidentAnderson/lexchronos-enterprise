@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
           caseNumber: invoice.case.caseNumber,
           title: invoice.case.title
         } : null,
-        payments: invoice.payments.map(payment => ({
+        payments: invoice.payments.map((payment: any) => ({
           id: payment.id,
           amount: payment.amount,
           status: payment.status,
