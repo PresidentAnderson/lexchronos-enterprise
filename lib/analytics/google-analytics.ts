@@ -13,6 +13,29 @@ declare global {
 // Google Analytics 4 Configuration
 export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_TRACKING_ID || '';
 
+// GoogleAnalytics class for provider compatibility
+export class GoogleAnalytics {
+  static initialize() {
+    return initGA();
+  }
+
+  static trackEvent(eventName: string, parameters?: Record<string, any>) {
+    return trackEvent(eventName, parameters);
+  }
+
+  static trackPageView(url?: string) {
+    return trackPageView(url);
+  }
+
+  static trackConversion(conversionType: string, value?: number) {
+    return trackConversion(conversionType, value);
+  }
+
+  static setUserId(userId: string) {
+    return setUserId(userId);
+  }
+}
+
 // Initialize Google Analytics
 export const initGA = () => {
   if (typeof window !== 'undefined' && GA_TRACKING_ID) {
