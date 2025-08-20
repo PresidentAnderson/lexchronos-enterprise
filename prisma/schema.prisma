@@ -96,6 +96,9 @@ model Organization {
   courtDates      CourtDate[]
   evidence        Evidence[]
   notes           Note[]
+  subscription    Subscription?
+  payments        Payment[]
+  invoices        Invoice[]
 
   @@map("organizations")
   @@index([email])
@@ -756,5 +759,249 @@ enum NotificationType {
   CASE_UPDATE
   SYSTEM
   MESSAGE
+}
+
+// ===== SUBSCRIPTION MODELS =====
+model Subscription {
+  id                String          @id @default(cuid())
+  stripeCustomerId  String?         @unique
+  stripeSubscriptionId String?      @unique
+  
+  // Organization association
+  organizationId    String          @unique
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Subscription details
+  status            SubscriptionStatus @default(INACTIVE)
+  tier              SubscriptionTier   @default(BASIC)
+  priceId           String?         // Stripe price ID
+  productId         String?         // Stripe product ID
+  
+  // Billing cycle
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  billingCycle      BillingCycle    @default(MONTHLY)
+  
+  // Pricing
+  amount            Int?            // Amount in cents
+  currency          String          @default("USD")
+  
+  // Trial information
+  trialStart        DateTime?
+  trialEnd          DateTime?
+  
+  // Cancellation
+  cancelAt          DateTime?       // Scheduled cancellation
+  canceledAt        DateTime?       // When subscription was canceled
+  cancellationReason String?
+  
+  // Usage limits
+  maxUsers          Int?            // User limit for subscription
+  maxCases          Int?            // Case limit for subscription
+  maxStorage        BigInt?         // Storage limit in bytes
+  
+  // Features enabled
+  features          Json?           // Array of enabled features
+  
+  // Metadata
+  metadata          Json?           // Additional subscription metadata
+  
+  // Audit fields
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  // Relations
+  payments          Payment[]
+  invoices          Invoice[]
+
+  @@map("subscriptions")
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+  @@index([organizationId])
+}
+
+model Payment {
+  id                String         @id @default(cuid())
+  stripePaymentIntentId String?    @unique
+  stripeChargeId    String?        @unique
+  
+  // Payment details
+  amount            Int            // Amount in cents
+  currency          String         @default("USD")
+  status            PaymentStatus  @default(PENDING)
+  
+  // Payment method
+  paymentMethod     String?        // Payment method type (card, bank_transfer, etc.)
+  paymentMethodId   String?        // Stripe payment method ID
+  
+  // Customer information
+  customerEmail     String?
+  customerName      String?
+  billingAddress    Json?          // Billing address object
+  
+  // Association
+  organizationId    String
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  subscriptionId    String?
+  subscription      Subscription?  @relation(fields: [subscriptionId], references: [id])
+  
+  invoiceId         String?
+  invoice           Invoice?       @relation(fields: [invoiceId], references: [id])
+  
+  // Stripe webhook data
+  stripeEventId     String?        // Stripe event ID for idempotency
+  
+  // Processing details
+  processedAt       DateTime?
+  failedAt          DateTime?
+  failureReason     String?
+  refundedAt        DateTime?
+  refundAmount      Int?           // Refunded amount in cents
+  
+  // Description
+  description       String?
+  
+  // Metadata
+  metadata          Json?
+  
+  // Audit fields
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@map("payments")
+  @@index([organizationId])
+  @@index([subscriptionId])
+  @@index([stripePaymentIntentId])
+  @@index([status])
+}
+
+model Invoice {
+  id                String         @id @default(cuid())
+  stripeInvoiceId   String?        @unique
+  
+  // Invoice details
+  number            String         @unique  // Invoice number
+  status            InvoiceStatus  @default(DRAFT)
+  
+  // Amounts
+  subtotal          Int            // Subtotal in cents
+  tax               Int?           // Tax amount in cents
+  total             Int            // Total amount in cents
+  amountPaid        Int            @default(0) // Amount paid in cents
+  amountDue         Int            // Amount due in cents
+  currency          String         @default("USD")
+  
+  // Dates
+  issueDate         DateTime       @default(now())
+  dueDate           DateTime?
+  paidAt            DateTime?
+  
+  // Customer information
+  customerEmail     String
+  customerName      String?
+  billingAddress    Json?          // Billing address object
+  
+  // Association
+  organizationId    String
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  subscriptionId    String?
+  subscription      Subscription?  @relation(fields: [subscriptionId], references: [id])
+  
+  // Invoice items (stored as JSON for flexibility)
+  lineItems         Json           // Array of line items
+  
+  // Payment tracking
+  paymentAttempts   Int            @default(0)
+  lastPaymentAttempt DateTime?
+  
+  // Settings
+  autoAdvance       Boolean        @default(true)
+  collectionMethod  String         @default("charge_automatically")
+  
+  // Description
+  description       String?
+  footerText        String?
+  
+  // Metadata
+  metadata          Json?
+  
+  // Audit fields
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  // Relations
+  payments          Payment[]
+
+  @@map("invoices")
+  @@index([organizationId])
+  @@index([subscriptionId])
+  @@index([stripeInvoiceId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model WebhookEvent {
+  id                String         @id @default(cuid())
+  stripeEventId     String         @unique  // Stripe event ID for idempotency
+  eventType         String         // Stripe event type
+  
+  // Event data
+  data              Json           // Full Stripe event data
+  
+  // Processing status
+  processed         Boolean        @default(false)
+  processedAt       DateTime?
+  processingError   String?
+  retryCount        Int            @default(0)
+  
+  // Metadata
+  apiVersion        String?        // Stripe API version
+  
+  // Audit fields
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@map("webhook_events")
+  @@index([stripeEventId])
+  @@index([eventType])
+  @@index([processed])
+}
+
+// ===== NEW ENUMS =====
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  TRIALING
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+  QUARTERLY
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+  REQUIRES_ACTION
+  REQUIRES_CONFIRMATION
+  PROCESSING
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
 }
 

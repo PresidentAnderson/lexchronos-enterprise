@@ -21,7 +21,15 @@
     "i18n:missing": "node scripts/translation-manager.js missing",
     "i18n:stats": "node scripts/translation-manager.js stats",
     "i18n:export": "node scripts/translation-manager.js export",
-    "i18n:import": "node scripts/translation-manager.js import"
+    "i18n:import": "node scripts/translation-manager.js import",
+    "db:setup": "node scripts/setup-database.js",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset --force",
+    "db:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -72,7 +80,11 @@
     "accept-language": "^3.0.18",
     "pg": "^8.11.3",
     "redis": "^4.6.12",
-    "prom-client": "^15.1.0"
+    "prom-client": "^15.1.0",
+    "nodemailer": "^6.9.8",
+    "handlebars": "^4.7.8",
+    "node-cron": "^3.0.3",
+    "@sentry/nextjs": "^8.40.0"
   },
   "devDependencies": {
     "typescript": "^5",
@@ -100,6 +112,9 @@
     "axe-playwright": "^1.2.3",
     "playwright": "^1.40.0",
     "@playwright/test": "^1.40.0",
-    "msw": "^2.0.8"
+    "msw": "^2.0.8",
+    "ts-node": "^10.9.1",
+    "@types/nodemailer": "^6.4.14",
+    "@types/node-cron": "^3.0.11"
   }
 }
