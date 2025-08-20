@@ -38,7 +38,7 @@ const generateMockOrganizations = () => {
     subscription: {
       plan: plans[Math.floor(Math.random() * plans.length)],
       status: statuses[Math.floor(Math.random() * statuses.length)],
-      billingCycle: Math.random() > 0.5 ? 'monthly' : 'yearly' as const,
+      billingCycle: (Math.random() > 0.5 ? 'monthly' : 'yearly') as 'monthly' | 'yearly',
       nextBillingDate: new Date(Date.now() + Math.random() * 90 * 24 * 60 * 60 * 1000),
       amount: Math.floor(Math.random() * 500) + 100
     },
