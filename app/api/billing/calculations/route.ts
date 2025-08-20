@@ -249,8 +249,8 @@ export async function POST(request: NextRequest) {
     if (generateInvoice) {
       // This would create an invoice with the billing entries
       // For now, just add a message
-      response.data.invoiceGenerated = false;
-      response.data.invoiceMessage = "Invoice generation not implemented yet";
+      (response.data as any).invoiceGenerated = false;
+      (response.data as any).invoiceMessage = "Invoice generation not implemented yet";
     }
 
     return NextResponse.json(response);
