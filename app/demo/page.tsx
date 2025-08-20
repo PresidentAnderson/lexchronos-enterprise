@@ -7,14 +7,14 @@ import { LazyImage } from '@/components/lazy-image';
 import { useOfflineStorage } from '@/lib/offline-storage';
 import { 
   Camera, 
-  Timeline, 
   Download, 
   Wifi, 
   Battery, 
   Smartphone,
-  Gesture,
   Bell,
-  Zap
+  Zap,
+  Clock,
+  Hand
 } from 'lucide-react';
 
 export default function DemoPage() {
@@ -91,7 +91,7 @@ export default function DemoPage() {
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <Gesture className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <Hand className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
                 Touch Gestures
@@ -214,7 +214,7 @@ export default function DemoPage() {
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 mb-8">
           <div className="p-6 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3 mb-2">
-              <Timeline className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
                 Interactive Timeline
               </h2>
