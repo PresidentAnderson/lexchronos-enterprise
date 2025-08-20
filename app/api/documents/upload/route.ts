@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
         fileSize: file.size,
         mimeType: file.type,
         category: category as any,
-        type: docType,
+        type: docType as any,
         isConfidential,
         organizationId,
         caseId: caseId || null,
