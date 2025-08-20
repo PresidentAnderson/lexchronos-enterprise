@@ -191,7 +191,6 @@ model Case {
   jurisdictionId    String?
   jurisdiction      Jurisdiction?      @relation("CaseJurisdiction", fields: [jurisdictionId], references: [id])
   automatedDeadlines AutomatedDeadline[]
-  deadlineCalculations DeadlineCalculation[]
   
   // Client Intake & CRM relations
   convertedFromLead   Lead?            @relation("ConvertedFromLead")
@@ -1167,6 +1166,9 @@ model ConflictCheck {
   performedById String
   performedBy   User           @relation(fields: [performedById], references: [id])
   
+  // Related waivers
+  waivers       ConflictWaiver[]
+  
   // Metadata
   metadata      Json?          // Additional check metadata
   
@@ -1785,7 +1787,6 @@ model DeadlineTemplate {
   
   // Jurisdiction (can be independent of court rule)
   jurisdictionId  String?
-  jurisdiction    Jurisdiction? @relation(fields: [jurisdictionId], references: [id])
   
   // Deadline properties
   deadlineType    DeadlineType  @default(FILING)
@@ -1946,7 +1947,6 @@ model DeadlineCalculation {
   
   // Jurisdiction for holiday rules
   jurisdictionId    String?
-  jurisdiction      Jurisdiction? @relation(fields: [jurisdictionId], references: [id])
   
   // Results
   calculatedDate    DateTime
