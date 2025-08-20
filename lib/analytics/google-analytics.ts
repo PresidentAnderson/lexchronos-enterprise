@@ -182,5 +182,14 @@ export class GoogleAnalytics {
   }
 }
 
+// Export individual methods for namespace-style imports
+export const trackCaseCreation = GoogleAnalytics.trackCaseCreation;
+export const trackDocumentUpload = GoogleAnalytics.trackDocumentUpload;
+export const trackTimeEntry = GoogleAnalytics.trackTimeEntry;
+export const trackBilling = GoogleAnalytics.trackBilling;
+export const trackCourtDate = GoogleAnalytics.trackCourtDate;
+export const trackClientInteraction = GoogleAnalytics.trackClientInteraction;
+export const setUserProperties = GoogleAnalytics.setUserProperties;
+
 // Export both named export and default export for compatibility
 export default GoogleAnalytics;
