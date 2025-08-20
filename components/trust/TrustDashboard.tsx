@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Building2, DollarSign, AlertTriangle, TrendingUp, Plus, Shield, Clock, CheckCircle2 } from 'lucide-react';
 import { TrustAccountForm } from './TrustAccountForm';
-import { TrustTransactionForm } from './TrustTransactionForm';
-import { TrustAccountList } from './TrustAccountList';
-import { TrustTransactionList } from './TrustTransactionList';
-import { TrustReconciliation } from './TrustReconciliation';
+// TODO: Create these components
+// import { TrustTransactionForm } from './TrustTransactionForm';
+// import { TrustAccountList } from './TrustAccountList';
+// import { TrustTransactionList } from './TrustTransactionList';
+// import { TrustReconciliation } from './TrustReconciliation';
 import { format } from 'date-fns';
 
 interface TrustDashboardProps {
@@ -241,15 +242,18 @@ export function TrustDashboard({ organizationId }: TrustDashboardProps) {
         </TabsList>
 
         <TabsContent value="accounts" className="space-y-4">
-          <TrustAccountList onAccountSelect={setSelectedAccount} />
+          {/* <TrustAccountList onAccountSelect={setSelectedAccount} /> */}
+          <div>Trust accounts list will be displayed here</div>
         </TabsContent>
 
         <TabsContent value="transactions" className="space-y-4">
-          <TrustTransactionList accountId={selectedAccount} />
+          {/* <TrustTransactionList accountId={selectedAccount} /> */}
+          <div>Trust transactions will be displayed here</div>
         </TabsContent>
 
         <TabsContent value="reconciliation" className="space-y-4">
-          <TrustReconciliation />
+          {/* <TrustReconciliation /> */}
+          <div>Trust reconciliation will be displayed here</div>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">
