@@ -346,7 +346,7 @@ export async function GET(request: NextRequest) {
       take: 10
     });
 
-    preview.courtDateReminders = upcomingCourtDates.map(courtDate => {
+    (preview as any).courtDateReminders = upcomingCourtDates.map((courtDate: any) => {
       const daysUntilDate = Math.ceil((courtDate.scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       return {
         id: courtDate.id,
