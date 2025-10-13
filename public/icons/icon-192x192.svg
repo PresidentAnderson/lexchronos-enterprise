@@ -1,0 +1,31 @@
+
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="38.400000000000006" fill="url(#grad)"/>
+  <g transform="translate(38.400000000000006, 38.400000000000006)">
+    <!-- Legal scales icon -->
+    <path d="M57.599999999999994 28.799999999999997 L96 48 L134.39999999999998 28.799999999999997" 
+          stroke="white" stroke-width="3.84" fill="none"/>
+    <circle cx="96" cy="57.599999999999994" r="9.600000000000001" fill="white"/>
+    <line x1="96" y1="67.19999999999999" x2="96" y2="134.39999999999998" 
+          stroke="white" stroke-width="3.84"/>
+    
+    <!-- Timeline dots -->
+    <circle cx="38.400000000000006" cy="86.4" r="3.84" fill="white"/>
+    <circle cx="38.400000000000006" cy="105.60000000000001" r="3.84" fill="white"/>
+    <circle cx="38.400000000000006" cy="124.80000000000001" r="3.84" fill="white"/>
+    
+    <!-- Timeline lines -->
+    <line x1="48" y1="86.4" x2="76.80000000000001" y2="86.4" 
+          stroke="white" stroke-width="1.92"/>
+    <line x1="48" y1="105.60000000000001" x2="76.80000000000001" y2="105.60000000000001" 
+          stroke="white" stroke-width="1.92"/>
+    <line x1="48" y1="124.80000000000001" x2="76.80000000000001" y2="124.80000000000001" 
+          stroke="white" stroke-width="1.92"/>
+  </g>
+</svg>

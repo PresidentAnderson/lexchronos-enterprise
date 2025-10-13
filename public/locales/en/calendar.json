@@ -1,0 +1,75 @@
+{
+  "title": "Calendar",
+  "newEvent": "New Event",
+  "eventDetails": "Event Details",
+  "allDay": "All Day",
+  "startTime": "Start Time",
+  "endTime": "End Time",
+  "location": "Location",
+  "attendees": "Attendees",
+  "description": "Description",
+  "reminder": "Reminder",
+  "repeat": "Repeat",
+  "eventTypes": {
+    "meeting": "Meeting",
+    "courtDate": "Court Date",
+    "deadline": "Deadline",
+    "deposition": "Deposition",
+    "consultation": "Consultation",
+    "hearing": "Hearing",
+    "mediation": "Mediation",
+    "arbitration": "Arbitration",
+    "conference": "Conference Call",
+    "research": "Research Time",
+    "preparation": "Case Preparation",
+    "travel": "Travel",
+    "personal": "Personal"
+  },
+  "views": {
+    "month": "Month",
+    "week": "Week",
+    "day": "Day",
+    "agenda": "Agenda",
+    "list": "List View"
+  },
+  "filters": {
+    "all": "All Events",
+    "myCases": "My Cases",
+    "courtDates": "Court Dates",
+    "deadlines": "Deadlines",
+    "meetings": "Meetings",
+    "personal": "Personal"
+  },
+  "reminders": {
+    "none": "No Reminder",
+    "5min": "5 minutes before",
+    "15min": "15 minutes before",
+    "30min": "30 minutes before",
+    "1hour": "1 hour before",
+    "1day": "1 day before",
+    "1week": "1 week before"
+  },
+  "recurrence": {
+    "never": "Never",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "custom": "Custom"
+  },
+  "actions": {
+    "edit": "Edit Event",
+    "delete": "Delete Event",
+    "duplicate": "Duplicate Event",
+    "export": "Export Event",
+    "share": "Share Event"
+  },
+  "messages": {
+    "eventCreated": "Event created successfully",
+    "eventUpdated": "Event updated successfully",
+    "eventDeleted": "Event deleted successfully",
+    "conflictWarning": "This event conflicts with another event",
+    "noEvents": "No events scheduled",
+    "loadingEvents": "Loading events..."
+  }
+}

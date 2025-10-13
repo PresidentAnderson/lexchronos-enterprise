@@ -1,0 +1,325 @@
+/* RTL (Right-to-Left) Support for Arabic and Hebrew */
+/* This file provides RTL-specific styles for languages like Arabic and Hebrew */
+
+/* Base RTL Direction */
+html[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Typography adjustments for RTL */
+html[dir="rtl"] body {
+  text-align: right;
+}
+
+html[dir="rtl"] .text-left {
+  text-align: right;
+}
+
+html[dir="rtl"] .text-right {
+  text-align: left;
+}
+
+/* Margin and Padding adjustments */
+html[dir="rtl"] .ml-1 { margin-right: 0.25rem; margin-left: 0; }
+html[dir="rtl"] .ml-2 { margin-right: 0.5rem; margin-left: 0; }
+html[dir="rtl"] .ml-3 { margin-right: 0.75rem; margin-left: 0; }
+html[dir="rtl"] .ml-4 { margin-right: 1rem; margin-left: 0; }
+html[dir="rtl"] .ml-5 { margin-right: 1.25rem; margin-left: 0; }
+html[dir="rtl"] .ml-6 { margin-right: 1.5rem; margin-left: 0; }
+html[dir="rtl"] .ml-8 { margin-right: 2rem; margin-left: 0; }
+html[dir="rtl"] .ml-auto { margin-right: auto; margin-left: 0; }
+
+html[dir="rtl"] .mr-1 { margin-left: 0.25rem; margin-right: 0; }
+html[dir="rtl"] .mr-2 { margin-left: 0.5rem; margin-right: 0; }
+html[dir="rtl"] .mr-3 { margin-left: 0.75rem; margin-right: 0; }
+html[dir="rtl"] .mr-4 { margin-left: 1rem; margin-right: 0; }
+html[dir="rtl"] .mr-5 { margin-left: 1.25rem; margin-right: 0; }
+html[dir="rtl"] .mr-6 { margin-left: 1.5rem; margin-right: 0; }
+html[dir="rtl"] .mr-8 { margin-left: 2rem; margin-right: 0; }
+html[dir="rtl"] .mr-auto { margin-left: auto; margin-right: 0; }
+
+html[dir="rtl"] .pl-1 { padding-right: 0.25rem; padding-left: 0; }
+html[dir="rtl"] .pl-2 { padding-right: 0.5rem; padding-left: 0; }
+html[dir="rtl"] .pl-3 { padding-right: 0.75rem; padding-left: 0; }
+html[dir="rtl"] .pl-4 { padding-right: 1rem; padding-left: 0; }
+html[dir="rtl"] .pl-5 { padding-right: 1.25rem; padding-left: 0; }
+html[dir="rtl"] .pl-6 { padding-right: 1.5rem; padding-left: 0; }
+html[dir="rtl"] .pl-8 { padding-right: 2rem; padding-left: 0; }
+
+html[dir="rtl"] .pr-1 { padding-left: 0.25rem; padding-right: 0; }
+html[dir="rtl"] .pr-2 { padding-left: 0.5rem; padding-right: 0; }
+html[dir="rtl"] .pr-3 { padding-left: 0.75rem; padding-right: 0; }
+html[dir="rtl"] .pr-4 { padding-left: 1rem; padding-right: 0; }
+html[dir="rtl"] .pr-5 { padding-left: 1.25rem; padding-right: 0; }
+html[dir="rtl"] .pr-6 { padding-left: 1.5rem; padding-right: 0; }
+html[dir="rtl"] .pr-8 { padding-left: 2rem; padding-right: 0; }
+
+/* Float adjustments */
+html[dir="rtl"] .float-left {
+  float: right;
+}
+
+html[dir="rtl"] .float-right {
+  float: left;
+}
+
+/* Flexbox adjustments */
+html[dir="rtl"] .flex-row-reverse {
+  flex-direction: row;
+}
+
+html[dir="rtl"] .flex-row {
+  flex-direction: row-reverse;
+}
+
+/* Position adjustments */
+html[dir="rtl"] .left-0 { right: 0; left: auto; }
+html[dir="rtl"] .left-1 { right: 0.25rem; left: auto; }
+html[dir="rtl"] .left-2 { right: 0.5rem; left: auto; }
+html[dir="rtl"] .left-3 { right: 0.75rem; left: auto; }
+html[dir="rtl"] .left-4 { right: 1rem; left: auto; }
+html[dir="rtl"] .left-5 { right: 1.25rem; left: auto; }
+html[dir="rtl"] .left-6 { right: 1.5rem; left: auto; }
+
+html[dir="rtl"] .right-0 { left: 0; right: auto; }
+html[dir="rtl"] .right-1 { left: 0.25rem; right: auto; }
+html[dir="rtl"] .right-2 { left: 0.5rem; right: auto; }
+html[dir="rtl"] .right-3 { left: 0.75rem; right: auto; }
+html[dir="rtl"] .right-4 { left: 1rem; right: auto; }
+html[dir="rtl"] .right-5 { left: 1.25rem; right: auto; }
+html[dir="rtl"] .right-6 { left: 1.5rem; right: auto; }
+
+/* Border radius adjustments */
+html[dir="rtl"] .rounded-l { border-radius: 0 0.375rem 0.375rem 0; }
+html[dir="rtl"] .rounded-r { border-radius: 0.375rem 0 0 0.375rem; }
+html[dir="rtl"] .rounded-tl { border-radius: 0 0.375rem 0 0; }
+html[dir="rtl"] .rounded-tr { border-radius: 0.375rem 0 0 0; }
+html[dir="rtl"] .rounded-bl { border-radius: 0 0 0.375rem 0; }
+html[dir="rtl"] .rounded-br { border-radius: 0 0 0 0.375rem; }
+
+/* Border adjustments */
+html[dir="rtl"] .border-l { border-right-width: 1px; border-left-width: 0; }
+html[dir="rtl"] .border-r { border-left-width: 1px; border-right-width: 0; }
+html[dir="rtl"] .border-l-0 { border-right-width: 0; }
+html[dir="rtl"] .border-r-0 { border-left-width: 0; }
+html[dir="rtl"] .border-l-2 { border-right-width: 2px; border-left-width: 0; }
+html[dir="rtl"] .border-r-2 { border-left-width: 2px; border-right-width: 0; }
+
+/* Transform adjustments for icons */
+html[dir="rtl"] .transform-flip-x {
+  transform: scaleX(-1);
+}
+
+html[dir="rtl"] .chevron-right {
+  transform: rotate(180deg);
+}
+
+html[dir="rtl"] .chevron-left {
+  transform: rotate(180deg);
+}
+
+html[dir="rtl"] .arrow-right {
+  transform: rotate(180deg);
+}
+
+html[dir="rtl"] .arrow-left {
+  transform: rotate(180deg);
+}
+
+/* Navigation specific RTL styles */
+html[dir="rtl"] .nav-sidebar {
+  right: 0;
+  left: auto;
+}
+
+html[dir="rtl"] .nav-main {
+  padding-right: 1rem;
+  padding-left: 0;
+}
+
+/* Dropdown adjustments */
+html[dir="rtl"] .dropdown-menu {
+  right: 0;
+  left: auto;
+}
+
+html[dir="rtl"] .dropdown-menu-left {
+  right: auto;
+  left: 0;
+}
+
+html[dir="rtl"] .dropdown-menu-right {
+  left: auto;
+  right: 0;
+}
+
+/* Form input adjustments */
+html[dir="rtl"] input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+html[dir="rtl"] input[type="search"] {
+  padding-right: 2.5rem;
+  padding-left: 0.75rem;
+}
+
+html[dir="rtl"] .search-icon {
+  right: 0.75rem;
+  left: auto;
+}
+
+/* Table adjustments */
+html[dir="rtl"] .table th:first-child,
+html[dir="rtl"] .table td:first-child {
+  text-align: right;
+}
+
+html[dir="rtl"] .table th:last-child,
+html[dir="rtl"] .table td:last-child {
+  text-align: left;
+}
+
+/* Modal and dialog adjustments */
+html[dir="rtl"] .modal-content {
+  text-align: right;
+}
+
+html[dir="rtl"] .modal-header .close {
+  margin: -1rem 0 -1rem auto;
+  padding: 1rem 0 1rem 1rem;
+}
+
+/* Timeline specific RTL styles */
+html[dir="rtl"] .timeline {
+  direction: rtl;
+}
+
+html[dir="rtl"] .timeline-item {
+  padding-right: 2rem;
+  padding-left: 0;
+  border-right: 2px solid #e5e7eb;
+  border-left: none;
+}
+
+html[dir="rtl"] .timeline-item::before {
+  right: -0.5rem;
+  left: auto;
+}
+
+html[dir="rtl"] .timeline-content {
+  margin-right: 1rem;
+  margin-left: 0;
+}
+
+/* Document viewer RTL styles */
+html[dir="rtl"] .document-viewer {
+  direction: ltr; /* Keep document content LTR for legal documents */
+}
+
+html[dir="rtl"] .document-viewer .toolbar {
+  direction: rtl; /* But keep toolbar RTL */
+}
+
+/* Legal-specific RTL adjustments */
+html[dir="rtl"] .legal-citation {
+  direction: ltr; /* Citations should remain LTR */
+  text-align: left;
+}
+
+html[dir="rtl"] .case-number {
+  direction: ltr; /* Case numbers should remain LTR */
+  text-align: left;
+}
+
+html[dir="rtl"] .date-field {
+  direction: ltr; /* Dates should remain LTR for international format */
+  text-align: left;
+}
+
+/* Loading states */
+html[dir="rtl"] .loading-spinner {
+  animation: spin-rtl 1s linear infinite;
+}
+
+@keyframes spin-rtl {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+/* Custom scrollbar for RTL */
+html[dir="rtl"] .custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+html[dir="rtl"] .custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html[dir="rtl"] .custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+html[dir="rtl"] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+html[dir="rtl"] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Utilities for RTL-specific content */
+.rtl-only {
+  display: none;
+}
+
+html[dir="rtl"] .rtl-only {
+  display: block;
+}
+
+.ltr-only {
+  display: block;
+}
+
+html[dir="rtl"] .ltr-only {
+  display: none;
+}
+
+/* Print styles for RTL */
+@media print {
+  html[dir="rtl"] * {
+    direction: rtl !important;
+    text-align: right !important;
+  }
+  
+  html[dir="rtl"] .legal-citation,
+  html[dir="rtl"] .case-number,
+  html[dir="rtl"] .date-field {
+    direction: ltr !important;
+    text-align: left !important;
+  }
+}
+
+/* Dark mode support for RTL */
+@media (prefers-color-scheme: dark) {
+  html[dir="rtl"] .custom-scrollbar::-webkit-scrollbar-track {
+    background: #374151;
+  }
+  
+  html[dir="rtl"] .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #6b7280;
+  }
+  
+  html[dir="rtl"] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+}

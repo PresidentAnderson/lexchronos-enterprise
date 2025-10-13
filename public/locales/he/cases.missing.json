@@ -1,0 +1,103 @@
+{
+  "title": "TODO: Translate \"Cases\" to HE",
+  "newCase": "TODO: Translate \"New Case\" to HE",
+  "caseDetails": "TODO: Translate \"Case Details\" to HE",
+  "caseNumber": "TODO: Translate \"Case Number\" to HE",
+  "caseTitle": "TODO: Translate \"Case Title\" to HE",
+  "caseType": "TODO: Translate \"Case Type\" to HE",
+  "status": "TODO: Translate \"Status\" to HE",
+  "priority": "TODO: Translate \"Priority\" to HE",
+  "assignedAttorney": "TODO: Translate \"Assigned Attorney\" to HE",
+  "client": "TODO: Translate \"Client\" to HE",
+  "court": "TODO: Translate \"Court\" to HE",
+  "judge": "TODO: Translate \"Judge\" to HE",
+  "dateOpened": "TODO: Translate \"Date Opened\" to HE",
+  "dateClosed": "TODO: Translate \"Date Closed\" to HE",
+  "nextCourtDate": "TODO: Translate \"Next Court Date\" to HE",
+  "estimatedValue": "TODO: Translate \"Estimated Value\" to HE",
+  "actualValue": "TODO: Translate \"Actual Value\" to HE",
+  "description": "TODO: Translate \"Description\" to HE",
+  "notes": "TODO: Translate \"Notes\" to HE",
+  "documents": "TODO: Translate \"Documents\" to HE",
+  "events": "TODO: Translate \"Events\" to HE",
+  "timeline": "TODO: Translate \"Timeline\" to HE",
+  "billing": "TODO: Translate \"Billing\" to HE",
+  "contacts": "TODO: Translate \"Contacts\" to HE",
+  "evidence": "TODO: Translate \"Evidence\" to HE",
+  "actions": {
+    "view": "TODO: Translate \"View Case\" to HE",
+    "edit": "TODO: Translate \"Edit Case\" to HE",
+    "close": "TODO: Translate \"Close Case\" to HE",
+    "archive": "TODO: Translate \"Archive Case\" to HE",
+    "delete": "TODO: Translate \"Delete Case\" to HE",
+    "duplicate": "TODO: Translate \"Duplicate Case\" to HE",
+    "share": "TODO: Translate \"Share Case\" to HE",
+    "export": "TODO: Translate \"Export Case\" to HE"
+  },
+  "filters": {
+    "all": "TODO: Translate \"All Cases\" to HE",
+    "active": "TODO: Translate \"Active\" to HE",
+    "pending": "TODO: Translate \"Pending\" to HE",
+    "closed": "TODO: Translate \"Closed\" to HE",
+    "onHold": "TODO: Translate \"On Hold\" to HE",
+    "myAssigned": "TODO: Translate \"My Assigned\" to HE",
+    "unassigned": "TODO: Translate \"Unassigned\" to HE",
+    "highPriority": "TODO: Translate \"High Priority\" to HE",
+    "dueThis week": "TODO: Translate \"Due This Week\" to HE"
+  },
+  "search": {
+    "placeholder": "TODO: Translate \"Search cases...\" to HE",
+    "byNumber": "TODO: Translate \"By case number\" to HE",
+    "byTitle": "TODO: Translate \"By title\" to HE",
+    "byClient": "TODO: Translate \"By client\" to HE",
+    "byAttorney": "TODO: Translate \"By attorney\" to HE",
+    "advanced": "TODO: Translate \"Advanced Search\" to HE"
+  },
+  "sort": {
+    "dateCreated": "TODO: Translate \"Date Created\" to HE",
+    "dateModified": "TODO: Translate \"Date Modified\" to HE",
+    "caseNumber": "TODO: Translate \"Case Number\" to HE",
+    "title": "TODO: Translate \"Title\" to HE",
+    "client": "TODO: Translate \"Client\" to HE",
+    "status": "TODO: Translate \"Status\" to HE",
+    "priority": "TODO: Translate \"Priority\" to HE",
+    "nextCourtDate": "TODO: Translate \"Next Court Date\" to HE"
+  },
+  "statusTypes": {
+    "new": "TODO: Translate \"New\" to HE",
+    "investigation": "TODO: Translate \"Investigation\" to HE",
+    "discovery": "TODO: Translate \"Discovery\" to HE",
+    "mediation": "TODO: Translate \"Mediation\" to HE",
+    "trial": "TODO: Translate \"Trial\" to HE",
+    "settlement": "TODO: Translate \"Settlement\" to HE",
+    "appeal": "TODO: Translate \"Appeal\" to HE",
+    "closed": "TODO: Translate \"Closed\" to HE",
+    "archived": "TODO: Translate \"Archived\" to HE"
+  },
+  "priorityLevels": {
+    "low": "TODO: Translate \"Low\" to HE",
+    "medium": "TODO: Translate \"Medium\" to HE",
+    "high": "TODO: Translate \"High\" to HE",
+    "critical": "TODO: Translate \"Critical\" to HE",
+    "urgent": "TODO: Translate \"Urgent\" to HE"
+  },
+  "messages": {
+    "caseCreated": "TODO: Translate \"Case created successfully\" to HE",
+    "caseUpdated": "TODO: Translate \"Case updated successfully\" to HE",
+    "caseClosed": "TODO: Translate \"Case closed successfully\" to HE",
+    "caseDeleted": "TODO: Translate \"Case deleted successfully\" to HE",
+    "confirmClose": "TODO: Translate \"Are you sure you want to close this case?\" to HE",
+    "confirmDelete": "TODO: Translate \"Are you sure you want to delete this case?\" to HE",
+    "noCases": "TODO: Translate \"No cases found\" to HE",
+    "loadingCases": "TODO: Translate \"Loading cases...\" to HE",
+    "errorLoading": "TODO: Translate \"Error loading cases\" to HE"
+  },
+  "outcomes": {
+    "won": "TODO: Translate \"Won\" to HE",
+    "lost": "TODO: Translate \"Lost\" to HE",
+    "settled": "TODO: Translate \"Settled\" to HE",
+    "dismissed": "TODO: Translate \"Dismissed\" to HE",
+    "withdrawn": "TODO: Translate \"Withdrawn\" to HE",
+    "pending": "TODO: Translate \"Pending\" to HE"
+  }
+}

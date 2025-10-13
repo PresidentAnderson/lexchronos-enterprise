@@ -1,0 +1,86 @@
+{
+  "title": "Timeline",
+  "caseTimeline": "Case Timeline",
+  "addEvent": "Add Event",
+  "eventTitle": "Event Title",
+  "eventDate": "Event Date",
+  "eventType": "Event Type",
+  "description": "Description",
+  "attachments": "Attachments",
+  "participants": "Participants",
+  "eventTypes": {
+    "caseOpened": "Case Opened",
+    "filing": "Court Filing",
+    "hearing": "Hearing",
+    "deposition": "Deposition",
+    "discovery": "Discovery Event",
+    "settlement": "Settlement Discussion",
+    "mediation": "Mediation",
+    "arbitration": "Arbitration",
+    "appeal": "Appeal Filed",
+    "judgment": "Judgment",
+    "caseClosed": "Case Closed",
+    "deadline": "Important Deadline",
+    "meeting": "Client Meeting",
+    "research": "Legal Research",
+    "correspondence": "Correspondence",
+    "negotiation": "Negotiation",
+    "investigation": "Investigation",
+    "expert": "Expert Consultation",
+    "evidence": "Evidence Collected",
+    "witness": "Witness Interview"
+  },
+  "views": {
+    "chronological": "Chronological",
+    "byType": "By Event Type",
+    "byParticipant": "By Participant",
+    "summary": "Summary View",
+    "detailed": "Detailed View"
+  },
+  "filters": {
+    "all": "All Events",
+    "thisMonth": "This Month",
+    "lastMonth": "Last Month",
+    "thisYear": "This Year",
+    "custom": "Custom Date Range",
+    "courtEvents": "Court Events",
+    "clientEvents": "Client Events",
+    "internalEvents": "Internal Events"
+  },
+  "export": {
+    "title": "Export Timeline",
+    "pdf": "Export as PDF",
+    "word": "Export as Word",
+    "excel": "Export as Excel",
+    "csv": "Export as CSV",
+    "includeAttachments": "Include Attachments",
+    "dateRange": "Date Range",
+    "eventTypes": "Event Types to Include"
+  },
+  "actions": {
+    "edit": "Edit Event",
+    "delete": "Delete Event",
+    "duplicate": "Duplicate Event",
+    "addFollowUp": "Add Follow-up",
+    "linkDocument": "Link Document",
+    "addNote": "Add Note",
+    "share": "Share Timeline"
+  },
+  "status": {
+    "completed": "Completed",
+    "inProgress": "In Progress",
+    "scheduled": "Scheduled",
+    "cancelled": "Cancelled",
+    "postponed": "Postponed"
+  },
+  "messages": {
+    "eventAdded": "Event added to timeline",
+    "eventUpdated": "Event updated successfully",
+    "eventDeleted": "Event deleted from timeline",
+    "noEvents": "No events in timeline",
+    "loadingTimeline": "Loading timeline...",
+    "exportSuccess": "Timeline exported successfully",
+    "exportFailed": "Export failed",
+    "confirmDelete": "Are you sure you want to delete this event?"
+  }
+}

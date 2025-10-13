@@ -1,0 +1,60 @@
+{
+  "appName": "LexChronos",
+  "tagline": "ניהול תיקים משפטיים מופעל בינה מלאכותית",
+  "navigation": {
+    "dashboard": "לוח בקרה",
+    "cases": "תיקים",
+    "calendar": "יומן",
+    "documents": "מסמכים",
+    "timeline": "ציר זמן",
+    "clients": "לקוחות",
+    "billing": "חיוב",
+    "settings": "הגדרות",
+    "profile": "פרופיל",
+    "logout": "התנתקות",
+    "login": "התחברות",
+    "register": "הרשמה"
+  },
+  "buttons": {
+    "save": "שמור",
+    "cancel": "בטל",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "view": "צפה",
+    "create": "צור",
+    "submit": "שלח",
+    "close": "סגור",
+    "confirm": "אשר",
+    "back": "חזור",
+    "next": "הבא",
+    "previous": "הקודם",
+    "search": "חפש",
+    "filter": "סנן",
+    "export": "יצא",
+    "import": "יבא",
+    "upload": "העלה",
+    "download": "הורד",
+    "print": "הדפס",
+    "share": "שתף"
+  },
+  "messages": {
+    "success": "הפעולה הושלמה בהצלחה",
+    "error": "אירעה שגיאה",
+    "warning": "אזהרה",
+    "info": "מידע",
+    "loading": "טוען...",
+    "noData": "אין נתונים זמינים",
+    "confirmDelete": "האם אתה בטוח שברצונך למחוק פריט זה?"
+  },
+  "currency": {
+    "symbol": "₪",
+    "code": "ILS",
+    "format": "{{amount, currency}}"
+  },
+  "dateFormat": {
+    "short": "dd/MM/yyyy",
+    "long": "d MMMM yyyy",
+    "dateTime": "dd/MM/yyyy HH:mm",
+    "time": "HH:mm"
+  }
+}

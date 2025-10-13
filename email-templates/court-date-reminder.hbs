@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Court Date Reminder</title>
+    <style>
+        body, table, td, p, a, li, blockquote {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        img {
+            -ms-interpolation-mode: bicubic;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f8f9fa;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .email-header {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        .email-header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .email-header .tagline {
+            color: #e9d5ff;
+            margin: 5px 0 0 0;
+            font-size: 14px;
+        }
+        
+        .email-body {
+            padding: 40px;
+        }
+        
+        .alert {
+            padding: 16px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        .alert.urgent {
+            background-color: #fef2f2;
+            border-left: 4px solid #dc2626;
+            color: #991b1b;
+        }
+        
+        .alert.warning {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+        
+        .alert.info {
+            background-color: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+            color: #0c4a6e;
+        }
+        
+        .court-info {
+            background-color: #faf5ff;
+            border: 1px solid #e9d5ff;
+            border-radius: 8px;
+            padding: 24px;
+            margin: 24px 0;
+        }
+        
+        .court-info h3 {
+            margin: 0 0 16px 0;
+            color: #7c3aed;
+            font-size: 20px;
+        }
+        
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .details-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+        
+        .details-table td:first-child {
+            font-weight: 600;
+            color: #475569;
+            width: 35%;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #7c3aed;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        
+        .button:hover {
+            background-color: #6d28d9;
+        }
+        
+        .checklist {
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .checklist h4 {
+            color: #15803d;
+            margin-top: 0;
+        }
+        
+        .checklist ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .checklist li {
+            margin-bottom: 8px;
+        }
+        
+        .email-footer {
+            background-color: #f1f5f9;
+            padding: 30px 40px;
+            text-align: center;
+            font-size: 14px;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 0 !important;
+                width: 100% !important;
+            }
+            
+            .email-header, .email-body, .email-footer {
+                padding: 20px !important;
+            }
+            
+            .email-header h1 {
+                font-size: 24px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>⚖️ Court Date Reminder</h1>
+            <p class="tagline">LexChronos Legal Management</p>
+        </div>
+        <div class="email-body">
+            {{#if (lte daysLeft 1)}}
+            <div class="alert urgent">
+                <strong>🚨 URGENT:</strong> Your court appearance is {{#if (eq daysLeft 0)}}TODAY{{else}}TOMORROW{{/if}}!
+            </div>
+            {{else if (lte daysLeft 3)}}
+            <div class="alert warning">
+                <strong>⚠️ IMPORTANT:</strong> Court date coming up in {{daysLeft}} days.
+            </div>
+            {{else}}
+            <div class="alert info">
+                <strong>📅 REMINDER:</strong> Court appearance scheduled in {{daysLeft}} days.
+            </div>
+            {{/if}}
+
+            <div class="court-info">
+                <h3>{{courtDate.title}}</h3>
+                
+                {{#if courtDate.description}}
+                <p><strong>Description:</strong> {{courtDate.description}}</p>
+                {{/if}}
+
+                <table class="details-table">
+                    <tr>
+                        <td>📅 Date:</td>
+                        <td><strong>{{formattedDate}}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>🕒 Time:</td>
+                        <td><strong>{{#if formattedTime}}{{formattedTime}}{{else}}Time TBD{{/if}}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>🏛️ Court:</td>
+                        <td>{{courtDate.courtName}}</td>
+                    </tr>
+                    {{#if courtDate.courtroom}}
+                    <tr>
+                        <td>🚪 Courtroom:</td>
+                        <td>{{courtDate.courtroom}}</td>
+                    </tr>
+                    {{/if}}
+                    {{#if courtDate.address}}
+                    <tr>
+                        <td>📍 Address:</td>
+                        <td>{{courtDate.address}}</td>
+                    </tr>
+                    {{/if}}
+                    <tr>
+                        <td>⚖️ Type:</td>
+                        <td>{{courtDate.type}}</td>
+                    </tr>
+                    {{#if courtDate.judge}}
+                    <tr>
+                        <td>👨‍⚖️ Judge:</td>
+                        <td>{{courtDate.judge}}</td>
+                    </tr>
+                    {{/if}}
+                    {{#if courtDate.case}}
+                    <tr>
+                        <td>📁 Case:</td>
+                        <td>{{courtDate.case.caseNumber}} - {{courtDate.case.title}}</td>
+                    </tr>
+                    {{/if}}
+                    {{#if courtDate.estimatedDuration}}
+                    <tr>
+                        <td>⏱️ Duration:</td>
+                        <td>{{courtDate.estimatedDuration}} minutes (estimated)</td>
+                    </tr>
+                    {{/if}}
+                </table>
+
+                {{#if courtDate.attendees}}
+                <h4 style="color: #7c3aed; margin-top: 20px;">👥 Attendees:</h4>
+                <ul style="margin: 10px 0;">
+                    {{#each courtDate.attendees}}
+                    <li>{{name}} - {{role}}</li>
+                    {{/each}}
+                </ul>
+                {{/if}}
+
+                {{#if courtDate.preparation}}
+                <h4 style="color: #7c3aed; margin-top: 20px;">📝 Preparation Notes:</h4>
+                <p>{{courtDate.preparation}}</p>
+                {{/if}}
+            </div>
+
+            <div style="text-align: center;">
+                <a href="{{appUrl}}/court-dates/{{courtDate.id}}" class="button">
+                    📋 View Court Date Details
+                </a>
+            </div>
+
+            <div class="checklist">
+                <h4>✅ Pre-Court Checklist</h4>
+                <ul>
+                    <li>Review case files and relevant documents</li>
+                    <li>Prepare opening statements and arguments</li>
+                    <li>Gather all necessary evidence and exhibits</li>
+                    <li>Confirm witness availability and preparation</li>
+                    <li>Check court rules and procedures</li>
+                    <li>Plan arrival time (recommend 30 minutes early)</li>
+                    <li>Prepare client for court appearance</li>
+                    <li>Review opposing counsel's recent filings</li>
+                </ul>
+            </div>
+
+            {{#if (lte daysLeft 1)}}
+            <div class="alert urgent">
+                <strong>Final Reminders:</strong>
+                <ul style="margin: 10px 0;">
+                    <li>Confirm parking arrangements</li>
+                    <li>Check court security requirements</li>
+                    <li>Bring valid ID and bar card</li>
+                    <li>Charge all electronic devices</li>
+                    <li>Notify client of any last-minute changes</li>
+                </ul>
+            </div>
+            {{/if}}
+
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+            
+            <div style="background-color: #eff6ff; border-radius: 6px; padding: 16px;">
+                <p><strong>💡 Pro Tip:</strong> Set multiple calendar reminders and arrive early to account for parking and security. Double-check any COVID-19 protocols or special court requirements.</p>
+            </div>
+        </div>
+        <div class="email-footer">
+            <p><strong>LexChronos Legal Management</strong></p>
+            <p>This is an automated court date reminder. Please do not reply to this email.</p>
+            <p>If you have questions, contact support at <a href="mailto:support@lexchronos.com">support@lexchronos.com</a></p>
+            <p style="margin-top: 20px; font-size: 12px;">
+                © 2025 LexChronos | Legal Case Management System
+            </p>
+        </div>
+    </div>
+</body>
+</html>

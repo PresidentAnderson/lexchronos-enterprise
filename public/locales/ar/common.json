@@ -1,0 +1,60 @@
+{
+  "appName": "LexChronos",
+  "tagline": "إدارة القضايا القانونية بالذكاء الاصطناعي",
+  "navigation": {
+    "dashboard": "لوحة التحكم",
+    "cases": "القضايا",
+    "calendar": "التقويم",
+    "documents": "المستندات",
+    "timeline": "الجدول الزمني",
+    "clients": "العملاء",
+    "billing": "الفواتير",
+    "settings": "الإعدادات",
+    "profile": "الملف الشخصي",
+    "logout": "تسجيل الخروج",
+    "login": "تسجيل الدخول",
+    "register": "التسجيل"
+  },
+  "buttons": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تحرير",
+    "view": "عرض",
+    "create": "إنشاء",
+    "submit": "إرسال",
+    "close": "إغلاق",
+    "confirm": "تأكيد",
+    "back": "رجوع",
+    "next": "التالي",
+    "previous": "السابق",
+    "search": "بحث",
+    "filter": "تصفية",
+    "export": "تصدير",
+    "import": "استيراد",
+    "upload": "رفع",
+    "download": "تحميل",
+    "print": "طباعة",
+    "share": "مشاركة"
+  },
+  "messages": {
+    "success": "تمت العملية بنجاح",
+    "error": "حدث خطأ",
+    "warning": "تحذير",
+    "info": "معلومات",
+    "loading": "جاري التحميل...",
+    "noData": "لا توجد بيانات متاحة",
+    "confirmDelete": "هل أنت متأكد من حذف هذا العنصر؟"
+  },
+  "currency": {
+    "symbol": "ر.س",
+    "code": "SAR",
+    "format": "{{amount, currency}}"
+  },
+  "dateFormat": {
+    "short": "dd/MM/yyyy",
+    "long": "d MMMM yyyy",
+    "dateTime": "dd/MM/yyyy HH:mm",
+    "time": "HH:mm"
+  }
+}

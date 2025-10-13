@@ -1,0 +1,69 @@
+{
+  "title": "TODO: Translate \"Dashboard\" to FR",
+  "welcome": "TODO: Translate \"Welcome back, {{name}}\" to FR",
+  "overview": "TODO: Translate \"Overview\" to FR",
+  "stats": {
+    "activeCases": "TODO: Translate \"Active Cases\" to FR",
+    "totalClients": "TODO: Translate \"Total Clients\" to FR",
+    "upcomingDeadlines": "TODO: Translate \"Upcoming Deadlines\" to FR",
+    "billableHours": "TODO: Translate \"Billable Hours\" to FR",
+    "revenue": "TODO: Translate \"Monthly Revenue\" to FR",
+    "outstandingInvoices": "TODO: Translate \"Outstanding Invoices\" to FR"
+  },
+  "recentActivity": {
+    "title": "TODO: Translate \"Recent Activity\" to FR",
+    "noActivity": "TODO: Translate \"No recent activity\" to FR",
+    "caseCreated": "TODO: Translate \"Case created: {{caseTitle}}\" to FR",
+    "documentUploaded": "TODO: Translate \"Document uploaded: {{documentName}}\" to FR",
+    "meetingScheduled": "TODO: Translate \"Meeting scheduled with {{clientName}}\" to FR",
+    "deadlineAdded": "TODO: Translate \"Deadline added: {{deadline}}\" to FR",
+    "invoiceSent": "TODO: Translate \"Invoice sent to {{clientName}}\" to FR",
+    "paymentReceived": "TODO: Translate \"Payment received from {{clientName}}\" to FR"
+  },
+  "quickActions": {
+    "title": "TODO: Translate \"Quick Actions\" to FR",
+    "newCase": "TODO: Translate \"New Case\" to FR",
+    "addClient": "TODO: Translate \"Add Client\" to FR",
+    "uploadDocument": "TODO: Translate \"Upload Document\" to FR",
+    "createInvoice": "TODO: Translate \"Create Invoice\" to FR",
+    "scheduleEvent": "TODO: Translate \"Schedule Event\" to FR",
+    "recordTime": "TODO: Translate \"Record Time\" to FR"
+  },
+  "upcomingEvents": {
+    "title": "TODO: Translate \"Upcoming Events\" to FR",
+    "noEvents": "TODO: Translate \"No upcoming events\" to FR",
+    "courtDate": "TODO: Translate \"Court Date\" to FR",
+    "clientMeeting": "TODO: Translate \"Client Meeting\" to FR",
+    "deadline": "TODO: Translate \"Deadline\" to FR",
+    "deposition": "TODO: Translate \"Deposition\" to FR",
+    "mediation": "TODO: Translate \"Mediation\" to FR",
+    "arbitration": "TODO: Translate \"Arbitration\" to FR"
+  },
+  "casesByStatus": {
+    "title": "TODO: Translate \"Cases by Status\" to FR",
+    "active": "TODO: Translate \"Active\" to FR",
+    "pending": "TODO: Translate \"Pending\" to FR",
+    "closed": "TODO: Translate \"Closed\" to FR",
+    "onHold": "TODO: Translate \"On Hold\" to FR"
+  },
+  "performance": {
+    "title": "TODO: Translate \"Performance Metrics\" to FR",
+    "casesWon": "TODO: Translate \"Cases Won\" to FR",
+    "casesLost": "TODO: Translate \"Cases Lost\" to FR",
+    "settlementRate": "TODO: Translate \"Settlement Rate\" to FR",
+    "averageCaseValue": "TODO: Translate \"Average Case Value\" to FR",
+    "clientSatisfaction": "TODO: Translate \"Client Satisfaction\" to FR",
+    "utilizationRate": "TODO: Translate \"Utilization Rate\" to FR"
+  },
+  "notifications": {
+    "title": "TODO: Translate \"Notifications\" to FR",
+    "markAllRead": "TODO: Translate \"Mark all as read\" to FR",
+    "noNotifications": "TODO: Translate \"No new notifications\" to FR",
+    "deadlineApproaching": "TODO: Translate \"Deadline approaching for {{caseTitle}}\" to FR",
+    "courtDateReminder": "TODO: Translate \"Court date reminder: {{date}}\" to FR",
+    "documentExpiring": "TODO: Translate \"Document expiring: {{documentName}}\" to FR",
+    "invoiceOverdue": "TODO: Translate \"Invoice overdue: {{invoiceNumber}}\" to FR",
+    "newMessage": "TODO: Translate \"New message from {{senderName}}\" to FR",
+    "systemUpdate": "TODO: Translate \"System update available\" to FR"
+  }
+}
