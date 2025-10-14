@@ -248,7 +248,7 @@ export async function POST(req: NextRequest) {
           includeWeekends: template.includeWeekends,
           includeHolidays: template.includeHolidays,
           businessDaysOnly: template.businessDaysOnly,
-          jurisdictionId: template.jurisdictionId || caseRecord.jurisdictionId,
+          jurisdictionId: template.jurisdictionId ?? caseRecord.jurisdictionId ?? undefined,
         })
 
         // Create automated deadline record
@@ -290,7 +290,7 @@ export async function POST(req: NextRequest) {
             reminderDays: template.reminderDays,
             isRecurring: template.isRecurring,
             caseId: caseRecord.id,
-            jurisdictionId: template.jurisdictionId || caseRecord.jurisdictionId,
+            jurisdictionId: template.jurisdictionId ?? caseRecord.jurisdictionId ?? undefined,
             notes: `Auto-generated from template: ${template.name}`,
           }
         })
@@ -320,7 +320,7 @@ export async function POST(req: NextRequest) {
             includeWeekends: template.includeWeekends,
             includeHolidays: template.includeHolidays,
             businessDaysOnly: template.businessDaysOnly,
-            jurisdictionId: template.jurisdictionId || caseRecord.jurisdictionId,
+            jurisdictionId: template.jurisdictionId ?? caseRecord.jurisdictionId ?? undefined,
           },
           calculationResult,
           caseRecord.id,

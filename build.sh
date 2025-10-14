@@ -26,9 +26,8 @@ npx prisma generate >/dev/null 2>&1 || echo "⚠️ Prisma generation skipped"
 echo "🏗️ Building static site..."
 npx next build
 
-# Step 6: Export static site to 'out' directory
-echo "📤 Exporting to static files..."
-npx next export
+# Step 6: Static export is handled by output: 'export' in next.config.js
+echo "📤 Static export handled by next.config.js output setting..."
 
 # Step 7: Verify out directory exists
 echo "✅ Verifying export directory..."
