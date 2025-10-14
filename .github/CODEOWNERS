@@ -1,0 +1,38 @@
+# LexChronos Enterprise Code Owners
+# This file defines who owns different parts of the codebase
+
+# Global owners - require review for any changes
+* @PresidentAnderson
+
+# Database and schema changes - critical for data integrity
+/prisma/ @PresidentAnderson
+/lib/database/ @PresidentAnderson
+/lib/supabase/ @PresidentAnderson
+
+# Authentication and security - critical for platform security
+/lib/auth/ @PresidentAnderson
+/middleware.ts @PresidentAnderson
+/lib/security/ @PresidentAnderson
+
+# API routes - require careful review
+/app/api/ @PresidentAnderson
+
+# Configuration files - critical for deployments
+*.config.* @PresidentAnderson
+.env.* @PresidentAnderson
+package.json @PresidentAnderson
+tsconfig.json @PresidentAnderson
+tailwind.config.js @PresidentAnderson
+
+# GitHub workflows and repository settings
+/.github/ @PresidentAnderson
+
+# Documentation - maintain quality
+/docs/ @PresidentAnderson
+*.md @PresidentAnderson
+
+# Deployment configurations
+/netlify.toml @PresidentAnderson
+/vercel.json @PresidentAnderson
+/Dockerfile @PresidentAnderson
+/docker-compose.yml @PresidentAnderson
