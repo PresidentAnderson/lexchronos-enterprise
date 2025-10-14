@@ -3,6 +3,10 @@
 # LexChronos Build Script for Netlify Demo
 echo "🚀 Starting LexChronos demo build process..."
 
+# Suppress npm deprecation warnings for cleaner output
+export NPM_CONFIG_FUND=false
+export NPM_CONFIG_AUDIT=false
+
 # Step 1: Copy demo configuration files
 echo "📁 Copying demo configuration..."
 cp next.config.demo.mjs next.config.mjs
@@ -16,7 +20,7 @@ sed -i 's/"postinstall": "prisma generate",//g' package.json
 
 # Step 3: Install dependencies without postinstall
 echo "📦 Installing dependencies..."
-npm install
+npm install --loglevel=error
 
 # Step 4: Generate minimal Prisma client (suppress warnings)
 echo "🗄️ Generating minimal Prisma client..."

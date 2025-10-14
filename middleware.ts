@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // Skip middleware in static/demo mode
-  if (process.env.DEMO_MODE === 'true' || process.env.DISABLE_DATABASE === 'true') {
+  // Skip middleware in static/demo mode or during build
+  if (process.env.DEMO_MODE === 'true' || process.env.DISABLE_DATABASE === 'true' || process.env.NODE_ENV === 'production') {
     return NextResponse.next()
   }
 
