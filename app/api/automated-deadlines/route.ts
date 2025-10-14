@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const validation = await validateRequest(body, triggerEventSchema)
+    const validation = await validateRequest(triggerEventSchema, body)
     if (!validation.success) {
       return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
     }
@@ -366,7 +366,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json()
-    const validation = await validateRequest(body, overrideSchema)
+    const validation = await validateRequest(overrideSchema, body)
     if (!validation.success) {
       return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
     }

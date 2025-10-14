@@ -418,3 +418,113 @@ export async function checkUsageLimits(lawFirmId: string) {
     };
   }
 }
+
+// Payment method functions for Stripe integration
+
+// Upsert payment method
+export async function upsertPaymentMethod(data: {
+  id?: string;
+  stripePaymentMethodId: string;
+  organizationId: string;
+  type: string;
+  last4?: string;
+  brand?: string;
+  expiryMonth?: number;
+  expiryYear?: number;
+  isDefault?: boolean;
+}) {
+  try {
+    return await prisma.paymentMethod.upsert({
+      where: data.id ? { id: data.id } : { stripePaymentMethodId: data.stripePaymentMethodId },
+      update: {
+        type: data.type,
+        last4: data.last4,
+        brand: data.brand,
+        expiryMonth: data.expiryMonth,
+        expiryYear: data.expiryYear,
+        isDefault: data.isDefault,
+        updatedAt: new Date()
+      },
+      create: {
+        stripePaymentMethodId: data.stripePaymentMethodId,
+        organizationId: data.organizationId,
+        type: data.type,
+        last4: data.last4,
+        brand: data.brand,
+        expiryMonth: data.expiryMonth,
+        expiryYear: data.expiryYear,
+        isDefault: data.isDefault || false
+      }
+    });
+  } catch (error) {
+    console.error('Error upserting payment method:', error);
+    return null;
+  }
+}
+
+// Update payment record
+export async function updatePaymentRecord(paymentId: string, data: {
+  status?: string;
+  refundAmount?: number;
+  refundReason?: string;
+  metadata?: any;
+}) {
+  try {
+    return await prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        status: data.status,
+        refundAmount: data.refundAmount,
+        refundReason: data.refundReason,
+        metadata: data.metadata,
+        updatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Error updating payment record:', error);
+    return null;
+  }
+}
+
+// Get subscription by Stripe ID
+export async function getSubscriptionByStripeId(stripeSubscriptionId: string) {
+  try {
+    return await prisma.subscription.findFirst({
+      where: { stripeSubscriptionId },
+      include: {
+        organization: true
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching subscription by Stripe ID:', error);
+    return null;
+  }
+}
+
+// Update subscription record
+export async function updateSubscriptionRecord(subscriptionId: string, data: {
+  status?: string;
+  currentPeriodStart?: Date;
+  currentPeriodEnd?: Date;
+  cancelAtPeriodEnd?: boolean;
+  canceledAt?: Date;
+  metadata?: any;
+}) {
+  try {
+    return await prisma.subscription.update({
+      where: { id: subscriptionId },
+      data: {
+        status: data.status,
+        currentPeriodStart: data.currentPeriodStart,
+        currentPeriodEnd: data.currentPeriodEnd,
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+        canceledAt: data.canceledAt,
+        metadata: data.metadata,
+        updatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Error updating subscription record:', error);
+    return null;
+  }
+}
