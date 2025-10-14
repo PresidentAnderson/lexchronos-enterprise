@@ -1,6 +1,11 @@
 [build]
   publish = "out"
-  command = "cp next.config.demo.mjs next.config.mjs && cp .env.demo .env.local && npm install && npm run build:static"
+  command = """
+    cp next.config.demo.mjs next.config.mjs &&
+    cp .env.demo .env.local &&
+    npm install &&
+    npm run build:static
+  """
 
 [build.environment]
   NODE_VERSION = "18"
