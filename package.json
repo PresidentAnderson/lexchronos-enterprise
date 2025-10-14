@@ -29,9 +29,6 @@
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio"
   },
-  "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
-  },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
