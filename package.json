@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node server.js",
     "build": "prisma generate && next build",
+    "build:static": "next build && next export",
     "postinstall": "prisma generate",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
