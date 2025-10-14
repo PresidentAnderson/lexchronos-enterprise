@@ -1,46 +1,23 @@
 #!/bin/bash
+set -e
 
-# LexChronos Build Script for Netlify Demo
-echo "🚀 Starting LexChronos demo build process..."
+echo "🚀 Starting LexChronos build for Netlify..."
 
-# Suppress npm deprecation warnings for cleaner output
-export NPM_CONFIG_FUND=false
-export NPM_CONFIG_AUDIT=false
+# Set up environment variables for demo mode
+export DEMO_MODE=true
+export DISABLE_DATABASE=true
+export NEXT_PUBLIC_DEMO_MODE=true
+export NEXT_PUBLIC_SUPABASE_URL=https://ouwobhnebqznsdtldozm.supabase.co
+export NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_peJGFf8kaUw0HwPYxJ-uZA_gZLsUzAD
 
-# Step 1: Copy demo configuration files
-echo "📁 Copying demo configuration..."
-cp next.config.demo.mjs next.config.mjs
-cp .env.demo .env.local
-
-# Step 2: Temporarily remove postinstall script for demo build
-echo "📝 Temporarily removing database dependencies for demo..."
-# Create backup and remove postinstall line
-cp package.json package.json.backup
-sed -i 's/"postinstall": "prisma generate",//g' package.json
-
-# Step 3: Install dependencies without postinstall
 echo "📦 Installing dependencies..."
-npm install --loglevel=error
+npm ci --production=false
 
-# Step 4: Generate minimal Prisma client (suppress warnings)
-echo "🗄️ Generating minimal Prisma client..."
-npx prisma generate >/dev/null 2>&1 || echo "⚠️ Prisma generation skipped"
+echo "🔧 Setting up demo configuration..."
+cp next.config.demo.mjs next.config.mjs
 
-# Step 5: Build static site with Next.js
-echo "🏗️ Building static site..."
-npx next build
+echo "🏗️ Building Next.js application..."
+npm run build
 
-# Step 6: Static export is handled by output: 'export' in next.config.js
-echo "📤 Static export handled by next.config.js output setting..."
-
-# Step 7: Verify out directory exists
-echo "✅ Verifying export directory..."
-if [ -d "out" ]; then
-    echo "✅ Export directory 'out' created successfully"
-    ls -la out/ | head -10
-else
-    echo "❌ Export directory 'out' not found"
-    exit 1
-fi
-
-echo "✅ Demo build completed successfully!"
+echo "✅ Build completed successfully!"
+ls -la out/
