@@ -1,74 +1,47 @@
-import { cookies } from 'next/headers'
+// Server-side Supabase client - safe for static builds
+// Always returns null during static builds to prevent Edge Runtime issues
 
 export const createServerSupabaseClient = () => {
-  // Skip in demo/static mode
-  if (process.env.DEMO_MODE === 'true' || process.env.DISABLE_DATABASE === 'true') {
+  // Always return null during static builds, demo mode, or production
+  if (process.env.NODE_ENV === 'production' || process.env.DEMO_MODE === 'true' || process.env.DISABLE_DATABASE === 'true') {
     return null
   }
 
-  // Dynamic import to avoid build issues in static mode
-  const createServerClient = require('@supabase/ssr').createServerClient
-  const cookieStore = cookies()
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
-            // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    }
-  )
-}
-
-// Admin client for server-side operations
-export const supabaseAdmin = (() => {
-  // Skip in demo/static mode
-  if (process.env.DEMO_MODE === 'true' || process.env.DISABLE_DATABASE === 'true') {
-    return null
-  }
-
+  // Only create client in development mode
   try {
+    const { cookies } = require('next/headers')
     const createServerClient = require('@supabase/ssr').createServerClient
+    const cookieStore = cookies()
+
     return createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get() {
-            return undefined
+          get(name: string) {
+            return cookieStore.get(name)?.value
           },
-          set() {
-            // No-op
+          set(name: string, value: string, options: any) {
+            try {
+              cookieStore.set({ name, value, ...options })
+            } catch (error) {
+              // Ignore cookie errors
+            }
           },
-          remove() {
-            // No-op
+          remove(name: string, options: any) {
+            try {
+              cookieStore.set({ name, value: '', ...options })
+            } catch (error) {
+              // Ignore cookie errors
+            }
           },
         },
       }
     )
   } catch (error) {
-    console.warn('Supabase SSR not available for admin client')
     return null
   }
-})()
+}
+
+// Admin client - always null during static builds
+export const supabaseAdmin = null
