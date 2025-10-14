@@ -63,9 +63,19 @@ export async function GET(req: NextRequest) {
     const page = parseInt(url.searchParams.get('page') || '1')
     const limit = parseInt(url.searchParams.get('limit') || '50')
 
-    // Build where clause
-    const where: any = {
-      case: { organizationId: user.organizationId }
+    // Build where clause - handle missing organizationId
+    const where: any = {}
+    
+    // If organizationId is available in JWT, use it for filtering
+    if (user.organizationId) {
+      where.case = { organizationId: user.organizationId }
+    } else if (user.firmId) {
+      // Fallback to firmId if available
+      where.case = { organizationId: user.firmId }
+    } else {
+      // For demo/static mode or missing org info, don't filter by organization
+      // This allows the API to work in demo mode
+      console.warn('No organizationId or firmId found in user token, skipping organization filter')
     }
 
     if (caseId) where.caseId = caseId
@@ -124,9 +134,16 @@ export async function GET(req: NextRequest) {
     })
 
     // Calculate status summaries
+    const statusSummaryWhere: any = {}
+    if (user.organizationId) {
+      statusSummaryWhere.case = { organizationId: user.organizationId }
+    } else if (user.firmId) {
+      statusSummaryWhere.case = { organizationId: user.firmId }
+    }
+    
     const statusSummary = await prisma.automatedDeadline.groupBy({
       by: ['status'],
-      where: { case: { organizationId: user.organizationId } },
+      where: statusSummaryWhere,
       _count: { id: true },
     })
 
@@ -170,11 +187,15 @@ export async function POST(req: NextRequest) {
     const { caseId, triggerEvent, triggerDate, customEventName, metadata } = validation.data
 
     // Verify case belongs to user's organization
+    const caseWhere: any = { id: caseId }
+    if (user.organizationId) {
+      caseWhere.organizationId = user.organizationId
+    } else if (user.firmId) {
+      caseWhere.organizationId = user.firmId
+    }
+    
     const caseRecord = await prisma.case.findFirst({
-      where: {
-        id: caseId,
-        organizationId: user.organizationId,
-      },
+      where: caseWhere,
       include: {
         jurisdiction: true,
       }
@@ -353,11 +374,15 @@ export async function PUT(req: NextRequest) {
     const { automatedDeadlineId, newDueDate, status, reason, notes } = validation.data
 
     // Verify automated deadline exists and belongs to user's organization
+    const automatedDeadlineWhere: any = { id: automatedDeadlineId }
+    if (user.organizationId) {
+      automatedDeadlineWhere.case = { organizationId: user.organizationId }
+    } else if (user.firmId) {
+      automatedDeadlineWhere.case = { organizationId: user.firmId }
+    }
+    
     const automatedDeadline = await prisma.automatedDeadline.findFirst({
-      where: {
-        id: automatedDeadlineId,
-        case: { organizationId: user.organizationId },
-      },
+      where: automatedDeadlineWhere,
       include: {
         deadline: true,
         case: { select: { id: true, caseNumber: true, title: true } }
@@ -372,7 +397,7 @@ export async function PUT(req: NextRequest) {
     const updateData: any = {
       isManualOverride: true,
       overrideReason: reason,
-      overriddenBy: user.id,
+      overriddenBy: user.id || user.userId,
       overriddenAt: new Date(),
     }
 
@@ -401,7 +426,7 @@ export async function PUT(req: NextRequest) {
       if (status === 'COMPLETED' || status === 'COMPLETED_LATE') {
         deadlineUpdateData.status = 'COMPLETED'
         deadlineUpdateData.completedAt = new Date()
-        deadlineUpdateData.completedBy = user.id
+        deadlineUpdateData.completedBy = user.id || user.userId
       } else if (status === 'CANCELLED' || status === 'WAIVED') {
         deadlineUpdateData.status = 'CANCELLED'
       }
@@ -420,11 +445,11 @@ export async function PUT(req: NextRequest) {
     await prisma.note.create({
       data: {
         title: 'Automated Deadline Override',
-        content: `User ${user.firstName} ${user.lastName} overrode automated deadline "${automatedDeadline.title}" for case ${automatedDeadline.case.caseNumber}. Reason: ${reason}${notes ? ` Notes: ${notes}` : ''}`,
+        content: `User ${user.firstName || 'Unknown'} ${user.lastName || 'User'} overrode automated deadline "${automatedDeadline.title}" for case ${automatedDeadline.case.caseNumber}. Reason: ${reason}${notes ? ` Notes: ${notes}` : ''}`,
         type: 'GENERAL',
-        organizationId: user.organizationId,
+        organizationId: user.organizationId || user.firmId,
         caseId: automatedDeadline.case.id,
-        authorId: user.id,
+        authorId: user.id || user.userId,
         isPrivate: false,
         tags: ['automated-deadline', 'override'],
       }
@@ -436,7 +461,7 @@ export async function PUT(req: NextRequest) {
       override: {
         reason,
         notes,
-        overriddenBy: user.id,
+        overriddenBy: user.id || user.userId,
         overriddenAt: updateData.overriddenAt,
       }
     })

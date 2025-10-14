@@ -8,6 +8,12 @@ export interface JWTPayload {
   userId: string
   email: string
   role?: string
+  organizationId?: string
+  firmId?: string
+  firstName?: string
+  lastName?: string
+  permissions?: string[]
+  id?: string
 }
 
 export class AuthService {
