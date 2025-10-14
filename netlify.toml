@@ -1,10 +1,12 @@
 [build]
   publish = "out"
-  command = "cp next.config.demo.mjs next.config.mjs && npm run build"
+  command = "cp next.config.demo.mjs next.config.mjs && cp .env.demo .env.local && npm install && npm run build:static"
 
 [build.environment]
   NODE_VERSION = "18"
   NPM_VERSION = "9"
+  DEMO_MODE = "true"
+  DISABLE_DATABASE = "true"
 
 # Redirect all API routes to external services or return 404
 [[redirects]]

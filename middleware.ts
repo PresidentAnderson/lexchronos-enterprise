@@ -1,7 +1,23 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // Skip middleware in static/demo mode
+  if (process.env.DEMO_MODE === 'true' || process.env.DISABLE_DATABASE === 'true') {
+    return NextResponse.next()
+  }
+
+  // Dynamic import for Supabase SSR to avoid build issues in static mode
+  let createServerClient: any
+  let CookieOptions: any
+  
+  try {
+    const supabaseSSR = await import('@supabase/ssr')
+    createServerClient = supabaseSSR.createServerClient
+    CookieOptions = supabaseSSR.CookieOptions
+  } catch (error) {
+    console.warn('Supabase SSR not available, skipping auth middleware')
+    return NextResponse.next()
+  }
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -16,7 +32,7 @@ export async function middleware(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
-        set(name: string, value: string, options: CookieOptions) {
+        set(name: string, value: string, options: any) {
           request.cookies.set({
             name,
             value,
@@ -33,7 +49,7 @@ export async function middleware(request: NextRequest) {
             ...options,
           })
         },
-        remove(name: string, options: CookieOptions) {
+        remove(name: string, options: any) {
           request.cookies.set({
             name,
             value: '',

@@ -85,7 +85,9 @@
     "nodemailer": "^6.9.8",
     "handlebars": "^4.7.8",
     "node-cron": "^3.0.3",
-    "@sentry/nextjs": "^8.40.0"
+    "@sentry/nextjs": "^8.40.0",
+    "@supabase/supabase-js": "^2.45.4",
+    "@supabase/ssr": "^0.5.1"
   },
   "devDependencies": {
     "typescript": "^5",
