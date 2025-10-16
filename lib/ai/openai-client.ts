@@ -1,323 +1,346 @@
 /**
- * OpenAI Integration Client for LexChronos
- * Handles document summarization, legal analysis, and content generation
+ * OpenAI Client for LexChronos
+ * Provides AI-powered document analysis, summarization, and legal intelligence
  */
 
 import OpenAI from 'openai';
-import { createHash } from 'crypto';
 
-export interface DocumentSummaryRequest {
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+interface DocumentSummaryRequest {
   content: string;
-  documentType?: 'legal' | 'medical' | 'financial' | 'correspondence' | 'procedural';
-  context?: string;
-  confidentialityLevel?: 'public' | 'confidential' | 'privileged';
+  documentType: 'legal' | 'contract' | 'evidence' | 'correspondence' | 'other';
+  confidentialityLevel: 'PUBLIC' | 'CONFIDENTIAL' | 'HIGHLY_CONFIDENTIAL' | 'ATTORNEY_EYES_ONLY';
 }
 
-export interface DocumentSummaryResponse {
+interface DocumentSummaryResponse {
   summary: string;
-  keyPoints: string[];
   suggestedCategory: string;
   confidentialityFlags: string[];
-  confidenceScore: number;
-  processingTime: number;
+  keyPoints: string[];
+  importance: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  suggestedTags: string[];
 }
 
-export interface LegalAnalysisRequest {
-  documents: string[];
-  caseContext: string;
-  analysisType: 'rebuttal' | 'strategy' | 'consistency' | 'ethical';
-  targetAudience?: 'legal' | 'public' | 'expert';
-}
-
-export interface LegalAnalysisResponse {
-  analysis: string;
-  recommendations: string[];
-  concerns: string[];
-  citations?: string[];
-  confidenceScore: number;
-}
-
-export interface EthicalFlag {
-  type: 'privacy' | 'confidentiality' | 'privilege' | 'defamation' | 'contempt';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  location: string;
+interface EthicalFlag {
+  type: 'CONFLICT_OF_INTEREST' | 'PRIVILEGE_CONCERN' | 'CONFIDENTIALITY_RISK' | 'PROFESSIONAL_CONDUCT';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  description: string;
   suggestion: string;
 }
 
-class OpenAIClient {
-  private client: OpenAI;
-  private readonly maxTokens = 4000;
-  private readonly temperature = 0.3; // Lower for more consistent legal analysis
-
-  constructor() {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY environment variable is required');
-    }
-    
-    this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
-
+export const openAIClient = {
   /**
-   * Generate comprehensive document summary
+   * Generate document summary with legal analysis
    */
   async summarizeDocument(request: DocumentSummaryRequest): Promise<DocumentSummaryResponse> {
-    const startTime = Date.now();
-    
-    try {
-      const prompt = this.buildSummaryPrompt(request);
-      
-      const completion = await this.client.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a legal document analysis expert. Provide accurate, objective summaries while identifying potential confidentiality concerns. Always maintain professional legal standards.`
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: this.maxTokens,
-        temperature: this.temperature,
-        response_format: { type: 'json_object' }
-      });
-
-      const response = JSON.parse(completion.choices[0].message.content || '{}');
-      
-      return {
-        summary: response.summary || '',
-        keyPoints: response.keyPoints || [],
-        suggestedCategory: response.suggestedCategory || 'GENERAL',
-        confidentialityFlags: response.confidentialityFlags || [],
-        confidenceScore: response.confidenceScore || 0.5,
-        processingTime: Date.now() - startTime
-      };
-    } catch (error) {
-      console.error('Error in document summarization:', error);
-      throw new Error('Failed to generate document summary');
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured');
     }
-  }
 
-  /**
-   * Generate legal analysis and strategy recommendations
-   */
-  async analyzeLegal(request: LegalAnalysisRequest): Promise<LegalAnalysisResponse> {
-    try {
-      const prompt = this.buildLegalAnalysisPrompt(request);
-      
-      const completion = await this.client.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a senior legal analyst specializing in case strategy and document review. Provide thorough, evidence-based analysis while identifying potential legal risks and opportunities.`
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: this.maxTokens,
-        temperature: this.temperature,
-        response_format: { type: 'json_object' }
-      });
-
-      const response = JSON.parse(completion.choices[0].message.content || '{}');
-      
-      return {
-        analysis: response.analysis || '',
-        recommendations: response.recommendations || [],
-        concerns: response.concerns || [],
-        citations: response.citations || [],
-        confidenceScore: response.confidenceScore || 0.5
-      };
-    } catch (error) {
-      console.error('Error in legal analysis:', error);
-      throw new Error('Failed to generate legal analysis');
-    }
-  }
-
-  /**
-   * Check content for ethical and confidentiality concerns
-   */
-  async checkEthicalConcerns(content: string): Promise<EthicalFlag[]> {
     try {
       const prompt = `
-        Analyze the following content for potential ethical, privacy, and confidentiality concerns:
-        
-        Content: ${content}
-        
-        Identify any:
-        - Personal identifying information
-        - Attorney-client privileged communications
-        - Confidential business information
-        - Potential defamatory statements
-        - Information that could compromise legal proceedings
-        
-        Return results as JSON array with format:
-        {
-          "flags": [
-            {
-              "type": "privacy|confidentiality|privilege|defamation|contempt",
-              "severity": "low|medium|high|critical",
-              "location": "specific text or line reference",
-              "suggestion": "recommended action"
-            }
-          ]
-        }
-      `;
+You are a legal AI assistant analyzing a ${request.documentType} document with ${request.confidentialityLevel} confidentiality level.
 
-      const completion = await this.client.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+Document Content:
+${request.content.substring(0, 4000)} ${request.content.length > 4000 ? '...[truncated]' : ''}
+
+Please provide a comprehensive analysis with the following:
+
+1. EXECUTIVE SUMMARY (2-3 sentences max)
+2. SUGGESTED CATEGORY (choose from: PLEADING, MOTION, BRIEF, EXHIBIT, CORRESPONDENCE, CONTRACT, DISCOVERY, EVIDENCE, RESEARCH, GENERAL)
+3. CONFIDENTIALITY FLAGS (identify any sensitive information that requires special handling)
+4. KEY POINTS (4-6 most important facts or legal points)
+5. IMPORTANCE LEVEL (LOW, MEDIUM, HIGH, CRITICAL based on legal significance)
+6. SUGGESTED TAGS (3-5 relevant tags for organization)
+
+Format your response as a valid JSON object with these exact keys:
+- summary
+- suggestedCategory  
+- confidentialityFlags (array of strings)
+- keyPoints (array of strings)
+- importance
+- suggestedTags (array of strings)
+
+Focus on legal relevance, accuracy, and maintaining confidentiality appropriate to the ${request.confidentialityLevel} level.
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
-            content: 'You are an expert in legal ethics and confidentiality. Flag any content that could pose legal or ethical risks.'
+            content: 'You are a specialized legal AI assistant focused on document analysis and legal practice management. Always maintain attorney-client privilege and confidentiality.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 2000,
-        temperature: 0.1, // Very low for consistent flagging
-        response_format: { type: 'json_object' }
+        temperature: 0.3,
+        max_tokens: 1500,
       });
 
-      const response = JSON.parse(completion.choices[0].message.content || '{"flags": []}');
-      return response.flags || [];
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        throw new Error('No response from OpenAI');
+      }
+
+      try {
+        const parsed = JSON.parse(response);
+        return {
+          summary: parsed.summary || 'No summary available',
+          suggestedCategory: parsed.suggestedCategory || 'GENERAL',
+          confidentialityFlags: parsed.confidentialityFlags || [],
+          keyPoints: parsed.keyPoints || [],
+          importance: parsed.importance || 'MEDIUM',
+          suggestedTags: parsed.suggestedTags || []
+        };
+      } catch (parseError) {
+        console.warn('Failed to parse OpenAI response as JSON, using fallback');
+        return {
+          summary: response.substring(0, 500),
+          suggestedCategory: 'GENERAL',
+          confidentialityFlags: [],
+          keyPoints: [],
+          importance: 'MEDIUM',
+          suggestedTags: []
+        };
+      }
     } catch (error) {
-      console.error('Error in ethical analysis:', error);
-      throw new Error('Failed to analyze ethical concerns');
+      console.error('OpenAI document summary error:', error);
+      throw new Error('Failed to generate document summary');
     }
-  }
+  },
 
   /**
    * Generate embeddings for semantic search
    */
   async generateEmbeddings(text: string): Promise<number[]> {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured');
+    }
+
     try {
-      const response = await this.client.embeddings.create({
+      // Truncate text to fit within token limits
+      const truncatedText = text.substring(0, 8000);
+      
+      const response = await openai.embeddings.create({
         model: 'text-embedding-3-small',
-        input: text.substring(0, 8000), // Limit input length
+        input: truncatedText,
       });
 
-      return response.data[0].embedding;
+      return response.data[0]?.embedding || [];
     } catch (error) {
-      console.error('Error generating embeddings:', error);
+      console.error('OpenAI embeddings error:', error);
       throw new Error('Failed to generate embeddings');
     }
-  }
+  },
 
   /**
-   * Transcribe audio to text using Whisper
+   * Check for ethical concerns in legal documents
    */
-  async transcribeAudio(audioBuffer: Buffer, filename: string): Promise<{
-    text: string;
-    language: string;
-    confidence: number;
-  }> {
+  async checkEthicalConcerns(content: string): Promise<EthicalFlag[]> {
+    if (!process.env.OPENAI_API_KEY) {
+      return []; // Return empty array if no API key
+    }
+
     try {
-      // Create a file-like object from buffer
-      const audioFile = new File([audioBuffer], filename);
-      
-      const transcription = await this.client.audio.transcriptions.create({
-        file: audioFile,
-        model: 'whisper-1',
-        language: 'en', // Default to English, can be auto-detected
-        response_format: 'verbose_json',
-        timestamp_granularities: ['segment']
+      const prompt = `
+Analyze this legal document content for potential ethical concerns:
+
+${content.substring(0, 3000)}
+
+Identify any potential issues related to:
+1. Conflicts of interest
+2. Attorney-client privilege concerns  
+3. Confidentiality risks
+4. Professional conduct violations
+
+For each concern found, provide:
+- type: CONFLICT_OF_INTEREST | PRIVILEGE_CONCERN | CONFIDENTIALITY_RISK | PROFESSIONAL_CONDUCT
+- severity: LOW | MEDIUM | HIGH | CRITICAL
+- description: Brief explanation of the concern
+- suggestion: Recommended action
+
+Return as a JSON array of objects. If no concerns are found, return an empty array.
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a legal ethics AI assistant. Focus on identifying potential ethical violations and professional conduct concerns in legal documents.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 1000,
       });
 
-      return {
-        text: transcription.text,
-        language: transcription.language || 'en',
-        confidence: 0.85 // Whisper doesn't provide confidence, using estimated value
-      };
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        return [];
+      }
+
+      try {
+        const parsed = JSON.parse(response);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (parseError) {
+        console.warn('Failed to parse ethical concerns response');
+        return [];
+      }
     } catch (error) {
-      console.error('Error in audio transcription:', error);
-      throw new Error('Failed to transcribe audio');
+      console.error('OpenAI ethical check error:', error);
+      return [];
     }
-  }
+  },
 
   /**
-   * Build comprehensive summary prompt
+   * Generate case timeline from evidence
    */
-  private buildSummaryPrompt(request: DocumentSummaryRequest): string {
-    const confidentialityGuidance = request.confidentialityLevel === 'public' 
-      ? 'This content may be made public. Flag any sensitive information.'
-      : 'This is confidential legal content. Identify privilege and privacy concerns.';
+  async generateTimeline(evidence: Array<{
+    title: string;
+    description?: string;
+    dateObtained: string;
+    type: string;
+    content?: string;
+  }>): Promise<Array<{
+    date: string;
+    title: string;
+    description: string;
+    importance: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    sources: string[];
+  }>> {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured');
+    }
 
-    return `
-      Analyze and summarize this ${request.documentType || 'legal'} document:
+    try {
+      const evidenceText = evidence.map(e => 
+        `${e.dateObtained}: ${e.title} (${e.type}) - ${e.description || ''}`
+      ).join('\n');
 
-      Document Content:
-      ${request.content}
+      const prompt = `
+Based on the following evidence, create a chronological timeline of key events:
 
-      Context: ${request.context || 'General legal document'}
+${evidenceText}
 
-      Instructions:
-      - Provide a concise, accurate summary (2-3 paragraphs)
-      - Extract 3-5 key points
-      - Suggest appropriate evidence category
-      - Flag potential confidentiality concerns
-      - ${confidentialityGuidance}
+Generate a timeline with the following for each event:
+- date: ISO date string
+- title: Brief event title
+- description: 1-2 sentence description
+- importance: LOW, MEDIUM, HIGH, or CRITICAL
+- sources: Array of evidence titles that support this event
 
-      Return response as JSON:
-      {
-        "summary": "comprehensive summary text",
-        "keyPoints": ["point 1", "point 2", "..."],
-        "suggestedCategory": "CHRONOLOGY|MEDICAL|CORRESPONDENCE|FINANCIAL|WITNESS|PROCEDURAL|ETHICAL|PUBLIC",
-        "confidentialityFlags": ["flag descriptions"],
-        "confidenceScore": 0.0-1.0
+Return as a JSON array sorted chronologically. Focus on legally significant events.
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a legal timeline analyst. Create accurate, chronological timelines from evidence while maintaining objectivity and legal precision.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 2000,
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        return [];
       }
-    `;
-  }
 
-  /**
-   * Build legal analysis prompt
-   */
-  private buildLegalAnalysisPrompt(request: LegalAnalysisRequest): string {
-    const analysisInstructions = {
-      rebuttal: 'Generate a structured rebuttal addressing opposing claims with evidence-based counterarguments.',
-      strategy: 'Develop legal strategy recommendations based on evidence strength and case context.',
-      consistency: 'Analyze documents for internal consistency and identify any contradictions.',
-      ethical: 'Review content for ethical compliance and professional responsibility concerns.'
-    };
-
-    return `
-      Perform ${request.analysisType} analysis for the following case:
-
-      Case Context: ${request.caseContext}
-
-      Documents:
-      ${request.documents.join('\n\n---\n\n')}
-
-      Analysis Type: ${analysisInstructions[request.analysisType]}
-      Target Audience: ${request.targetAudience || 'legal'}
-
-      Return response as JSON:
-      {
-        "analysis": "detailed analysis text",
-        "recommendations": ["recommendation 1", "recommendation 2", "..."],
-        "concerns": ["concern 1", "concern 2", "..."],
-        "citations": ["relevant legal precedents or authorities"],
-        "confidenceScore": 0.0-1.0
+      try {
+        const parsed = JSON.parse(response);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (parseError) {
+        console.warn('Failed to parse timeline response');
+        return [];
       }
-    `;
-  }
+    } catch (error) {
+      console.error('OpenAI timeline generation error:', error);
+      throw new Error('Failed to generate timeline');
+    }
+  },
 
   /**
-   * Generate content hash for caching and deduplication
+   * Analyze contract for key terms and risks
    */
-  generateContentHash(content: string): string {
-    return createHash('sha256').update(content).digest('hex');
-  }
+  async analyzeContract(content: string): Promise<{
+    contractType: string;
+    parties: string[];
+    keyTerms: Array<{ term: string; value: string; importance: string }>;
+    risks: Array<{ risk: string; severity: string; mitigation: string }>;
+    importantDates: Array<{ date: string; description: string; type: string }>;
+    recommendations: string[];
+  }> {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    try {
+      const prompt = `
+Analyze this contract and provide a comprehensive legal analysis:
+
+${content.substring(0, 5000)}
+
+Provide analysis in the following JSON format:
+{
+  "contractType": "string - type of contract",
+  "parties": ["array of party names"],
+  "keyTerms": [{"term": "string", "value": "string", "importance": "LOW|MEDIUM|HIGH|CRITICAL"}],
+  "risks": [{"risk": "string", "severity": "LOW|MEDIUM|HIGH|CRITICAL", "mitigation": "string"}],
+  "importantDates": [{"date": "YYYY-MM-DD", "description": "string", "type": "deadline|milestone|expiration"}],
+  "recommendations": ["array of recommendations"]
 }
 
-// Export singleton instance
-export const openAIClient = new OpenAIClient();
+Focus on legal significance, potential risks, and actionable insights.
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a contract analysis AI specializing in legal document review. Provide thorough, accurate analysis while maintaining professional legal standards.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 2000,
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        throw new Error('No response from OpenAI');
+      }
+
+      try {
+        return JSON.parse(response);
+      } catch (parseError) {
+        throw new Error('Failed to parse contract analysis response');
+      }
+    } catch (error) {
+      console.error('OpenAI contract analysis error:', error);
+      throw new Error('Failed to analyze contract');
+    }
+  }
+};
+
 export default openAIClient;
