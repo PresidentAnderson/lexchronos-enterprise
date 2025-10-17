@@ -1,12 +1,13 @@
 [build]
   publish = "out"
-  command = "bash build.sh"
+  command = "bash -x build.sh"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "18.20.8"
   NPM_VERSION = "9"
   DEMO_MODE = "true"
   DISABLE_DATABASE = "true"
+  NEXT_TELEMETRY_DISABLED = "1"
 
 # Redirect all API routes to external services or return 404
 [[redirects]]
