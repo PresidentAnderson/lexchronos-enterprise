@@ -30,7 +30,8 @@ import {
   User,
   Shield,
   ChevronLeft,
-  Activity
+  Activity,
+  ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/security/auth';
@@ -94,6 +95,13 @@ const navigationItems: NavItem[] = [
     href: '/admin/billing',
     icon: CreditCard,
     description: 'Invoices and payment processing',
+  },
+  {
+    title: 'Priority Offences',
+    href: '/admin/priority-offences',
+    icon: ShieldAlert,
+    description: 'Monitor G1–G12 coverage, risk, and automation signals',
+    badge: { text: 'New', variant: 'outline' }
   },
   {
     title: 'Settings',
