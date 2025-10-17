@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
     }
 
-    const data = validation.data
+    const data = validation.data as z.infer<typeof calculationSchema>
 
     // Create calculator instance
     const calculator = new DeadlineCalculator()
@@ -119,7 +119,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
     }
 
-    const { calculations, saveCalculations } = validation.data
+    const { calculations, saveCalculations } = validation.data as z.infer<typeof bulkCalculationSchema>
 
     // Create calculator instance
     const calculator = new DeadlineCalculator()
@@ -140,7 +140,7 @@ export async function PUT(req: NextRequest) {
     const results = await calculator.calculateBulkDeadlines(inputs)
 
     // Save calculations if requested
-    const calculationRecords = []
+    const calculationRecords: Array<Record<string, unknown> | null> = []
     if (saveCalculations) {
       for (let i = 0; i < inputs.length; i++) {
         try {

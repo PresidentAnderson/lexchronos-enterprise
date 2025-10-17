@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +65,6 @@ interface SearchFilters {
 export default function EvidencePage() {
   const { user, organization } = useAuth();
   const { toast } = useToast();
-  const searchParams = useSearchParams();
   
   // State management
   const [evidence, setEvidence] = useState<SearchResult[]>([]);
@@ -83,11 +81,13 @@ export default function EvidencePage() {
 
   // Initialize from URL params
   useEffect(() => {
-    const caseId = searchParams.get('caseId');
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const caseId = params.get('caseId');
     if (caseId) {
       setFilters(prev => ({ ...prev, caseIds: [caseId] }));
     }
-  }, [searchParams]);
+  }, []);
 
   // Search and load evidence
   const searchEvidence = async (reset = false) => {

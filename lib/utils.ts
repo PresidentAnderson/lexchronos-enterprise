@@ -199,6 +199,17 @@ export function downloadJSON(data: any, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+// Generate URL-friendly slug
+export function generateSlug(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .toLowerCase();
+}
+
 // Sleep/delay utility
 export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));

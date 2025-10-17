@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth/jwt';
 import { TrustTransactionSchema } from '@/lib/validation/schemas';
-
-const prisma = new PrismaClient();
 
 // GET /api/trust/transactions - Get trust transactions
 export async function GET(request: NextRequest) {

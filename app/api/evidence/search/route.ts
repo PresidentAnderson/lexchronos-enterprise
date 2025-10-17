@@ -310,10 +310,10 @@ async function getFilteredDocuments(
     take: limit
   });
 
-  return documents.map(doc => ({
+  return documents.map((doc: any): SearchResult => ({
     document: formatDocumentResult(doc),
     relevanceScore: 1.0,
-    matchType: 'full_text' as const
+    matchType: 'full_text'
   }));
 }
 

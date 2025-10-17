@@ -14,6 +14,8 @@ import {
 } from '@/lib/db';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // Update subscription schema
 const updateSubscriptionSchema = z.object({
   action: z.enum(['cancel', 'reactivate', 'change_plan']),

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth/jwt'
 import { z } from 'zod'
 import { validateRequest } from '@/lib/validation'
 import DeadlineCalculator from '@/lib/deadline-calculator'
-
-const prisma = new PrismaClient()
 
 // Validation schemas
 const triggerEventSchema = z.object({
@@ -151,7 +149,7 @@ export async function GET(req: NextRequest) {
       deadlines,
       summary: {
         total,
-        statusBreakdown: statusSummary.map(s => ({
+        statusBreakdown: statusSummary.map((s: { status: string; _count: { id: number } }) => ({
           status: s.status,
           count: s._count.id,
         }))

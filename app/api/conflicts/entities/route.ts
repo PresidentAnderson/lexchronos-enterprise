@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth/jwt';
 import { ConflictEntitySchema } from '@/lib/validation/schemas';
-
-const prisma = new PrismaClient();
 
 // GET /api/conflicts/entities - Get all conflict entities for organization
 export async function GET(request: NextRequest) {

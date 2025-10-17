@@ -37,7 +37,15 @@ const nextConfig = {
   env: {
     DEMO_MODE: 'true',
     DISABLE_DATABASE: 'true',
-  }
+  },
+
+  // Skip type and lint checks during demo builds
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;

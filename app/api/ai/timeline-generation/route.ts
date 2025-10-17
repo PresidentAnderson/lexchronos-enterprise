@@ -359,8 +359,8 @@ function findRelatedEvents(event: any, timeline: any[]): string[] {
   timeline.forEach(otherEvent => {
     if (otherEvent.id !== event.id) {
       const otherKeywords = otherEvent.title.toLowerCase().split(' ');
-      const commonKeywords = eventKeywords.filter(keyword => 
-        otherKeywords.some(other => other.includes(keyword) || keyword.includes(other))
+      const commonKeywords = eventKeywords.filter((keyword: string) =>
+        otherKeywords.some((other: string) => other.includes(keyword) || keyword.includes(other))
       );
       
       if (commonKeywords.length > 1) {

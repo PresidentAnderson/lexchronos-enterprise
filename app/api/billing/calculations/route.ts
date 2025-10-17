@@ -83,8 +83,8 @@ export async function POST(request: NextRequest) {
         totalFlatFees: 0,
         totalContingency: 0,
         grandTotal: 0,
-        billableEntries: billingEntries.filter(e => e.isBillable).length,
-        unbillableEntries: billingEntries.filter(e => !e.isBillable).length
+        billableEntries: billingEntries.filter((entry: { isBillable: boolean }) => entry.isBillable).length,
+        unbillableEntries: billingEntries.filter((entry: { isBillable: boolean }) => !entry.isBillable).length
       },
       breakdown: {
         byType: {} as Record<string, any>,
@@ -326,7 +326,10 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate summary
-    const summary = billingEntries.reduce((acc, entry) => {
+    const summary = billingEntries.reduce((
+      acc: { totalAmount: number; totalHours: number; entryCount: number },
+      entry: { type: string; hours?: number | null; hourlyRate?: number | null; amount?: number | null }
+    ) => {
       let entryAmount = 0;
 
       switch (entry.type) {

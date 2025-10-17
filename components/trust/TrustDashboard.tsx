@@ -8,8 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Building2, DollarSign, AlertTriangle, TrendingUp, Plus, Shield, Clock, CheckCircle2 } from 'lucide-react';
 import { TrustAccountForm } from './TrustAccountForm';
-// TODO: Create these components
-// import { TrustTransactionForm } from './TrustTransactionForm';
+// TODO: Replace with full-featured form when backend is available
+function TrustTransactionForm({ onSuccess }: { accountId: string | null; onSuccess: () => void }) {
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Trust transactions are disabled in the static demo environment. Connect to a live database to
+        enable recording deposits and withdrawals.
+      </p>
+      <Button onClick={onSuccess}>Close</Button>
+    </div>
+  );
+}
 // import { TrustAccountList } from './TrustAccountList';
 // import { TrustTransactionList } from './TrustTransactionList';
 // import { TrustReconciliation } from './TrustReconciliation';

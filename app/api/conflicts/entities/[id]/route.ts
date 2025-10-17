@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth/jwt';
 import { ConflictEntityUpdateSchema } from '@/lib/validation/schemas';
 
-const prisma = new PrismaClient();
+export const dynamic = 'force-dynamic';
 
 // GET /api/conflicts/entities/[id] - Get specific conflict entity
 export async function GET(

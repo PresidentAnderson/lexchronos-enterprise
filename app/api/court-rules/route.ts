@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth/jwt'
 import { z } from 'zod'
 import { validateRequest } from '@/lib/validation'
-
-const prisma = new PrismaClient()
 
 // Validation schemas
 const courtRuleSchema = z.object({
@@ -162,7 +160,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Only admins and lawyers can create rules
-    if (!['ADMIN', 'LAWYER'].includes(user.role)) {
+    const userRole = user.role ?? ''
+    if (!['ADMIN', 'LAWYER'].includes(userRole)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
@@ -172,7 +171,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
     }
 
-    const data = validation.data
+    const data = validation.data as z.infer<typeof courtRuleSchema>
 
     // Verify jurisdiction exists
     const jurisdiction = await prisma.jurisdiction.findUnique({
@@ -238,7 +237,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Only admins can create jurisdictions
-    if (user.role !== 'ADMIN') {
+    if ((user.role ?? '') !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
@@ -248,7 +247,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
     }
 
-    const data = validation.data
+    const data = validation.data as z.infer<typeof jurisdictionSchema>
 
     // Check for duplicate code
     const existingJurisdiction = await prisma.jurisdiction.findUnique({
