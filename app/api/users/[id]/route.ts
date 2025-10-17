@@ -1,13 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import bcrypt from 'bcryptjs';
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { getSupabaseAdminClient } from '@/lib/supabase/server'
+import { UserRole } from '@prisma/client'
 
 export const dynamic = 'force-dynamic';
 
 interface RouteParams {
   params: {
-    id: string;
-  };
+    id: string
+  }
+}
+
+const resolveUserRole = (role?: string | null, fallback?: UserRole): UserRole => {
+  if (role) {
+    const normalized = role.toUpperCase()
+    if ((Object.values(UserRole) as string[]).includes(normalized)) {
+      return normalized as UserRole
+    }
+  }
+
+  return fallback ?? UserRole.LAWYER
 }
 
 // GET /api/users/[id] - Get user by ID
@@ -16,7 +28,7 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const { id } = params;
+    const { id } = params
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -26,8 +38,8 @@ export async function GET(
             id: true,
             name: true,
             type: true,
-            email: true
-          }
+            email: true,
+          },
         },
         assignedCases: {
           select: {
@@ -35,10 +47,10 @@ export async function GET(
             caseNumber: true,
             title: true,
             status: true,
-            priority: true
+            priority: true,
           },
           orderBy: { createdAt: 'desc' },
-          take: 10
+          take: 10,
         },
         _count: {
           select: {
@@ -46,33 +58,31 @@ export async function GET(
             documents: true,
             billingEntries: true,
             notes: true,
-            assignedDeadlines: true
-          }
-        }
-      }
-    });
+            assignedDeadlines: true,
+          },
+        },
+      },
+    })
 
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
-      );
+      )
     }
 
-    // Remove sensitive data
-    const { password, ...userWithoutPassword } = user;
+    const { password, ...userWithoutPassword } = user
 
     return NextResponse.json({
       success: true,
-      data: userWithoutPassword
-    });
-
+      data: userWithoutPassword,
+    })
   } catch (error) {
-    console.error('Error fetching user:', error);
+    console.error('Error fetching user:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -82,19 +92,18 @@ export async function PUT(
   { params }: RouteParams
 ) {
   try {
-    const { id } = params;
-    const body = await request.json();
+    const { id } = params
+    const body = await request.json()
 
-    // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { id }
-    });
+      where: { id },
+    })
 
     if (!existingUser) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
-      );
+      )
     }
 
     const {
@@ -110,49 +119,96 @@ export async function PUT(
       biography,
       avatar,
       timezone,
-      isActive
-    } = body;
+      isActive,
+    } = body
 
-    // Check if email is being changed and if it already exists
     if (email && email !== existingUser.email) {
       const emailExists = await prisma.user.findUnique({
-        where: { email }
-      });
+        where: { email },
+      })
 
       if (emailExists) {
         return NextResponse.json(
           { success: false, error: 'Email already exists' },
           { status: 409 }
-        );
+        )
       }
     }
 
-    // Prepare update data
-    const updateData: any = {};
-
-    if (firstName !== undefined) updateData.firstName = firstName;
-    if (lastName !== undefined) updateData.lastName = lastName;
-    if (email !== undefined) updateData.email = email;
-    if (role !== undefined) updateData.role = role;
-    if (organizationId !== undefined) updateData.organizationId = organizationId;
-    if (phone !== undefined) updateData.phone = phone;
-    if (title !== undefined) updateData.title = title;
-    if (barNumber !== undefined) updateData.barNumber = barNumber;
-    if (biography !== undefined) updateData.biography = biography;
-    if (avatar !== undefined) updateData.avatar = avatar;
-    if (timezone !== undefined) updateData.timezone = timezone;
-    if (isActive !== undefined) updateData.isActive = isActive;
-
-    // Update fullName if first or last name changed
-    if (firstName !== undefined || lastName !== undefined) {
-      const newFirstName = firstName || existingUser.firstName;
-      const newLastName = lastName || existingUser.lastName;
-      updateData.fullName = `${newFirstName} ${newLastName}`;
+    const supabaseAdmin = getSupabaseAdminClient()
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'User management service unavailable' },
+        { status: 503 }
+      )
     }
 
-    // Hash password if provided
+    const { data: supabaseUserData } = await supabaseAdmin.auth.admin.getUserById(id)
+    const supabaseMetadata = (supabaseUserData?.user?.user_metadata ?? {}) as Record<string, unknown>
+
+    const nextRole = resolveUserRole(role as string | undefined, existingUser.role)
+
+    const metadataUpdates: Record<string, unknown> = {
+      ...supabaseMetadata,
+    }
+
+    if (firstName !== undefined) metadataUpdates.firstName = firstName
+    if (lastName !== undefined) metadataUpdates.lastName = lastName
+    if (phone !== undefined) metadataUpdates.phone = phone
+    if (role !== undefined) metadataUpdates.role = nextRole
+    if (organizationId !== undefined) metadataUpdates.organizationId = organizationId
+
+    const supabaseUpdatePayload: {
+      email?: string
+      password?: string
+      user_metadata?: Record<string, unknown>
+    } = {}
+
+    if (email !== undefined) {
+      supabaseUpdatePayload.email = email
+    }
+
     if (password) {
-      updateData.password = await bcrypt.hash(password, 12);
+      supabaseUpdatePayload.password = password
+    }
+
+    if (Object.keys(metadataUpdates).length > 0) {
+      supabaseUpdatePayload.user_metadata = metadataUpdates
+    }
+
+    if (Object.keys(supabaseUpdatePayload).length > 0) {
+      const { error: supabaseUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
+        id,
+        supabaseUpdatePayload
+      )
+
+      if (supabaseUpdateError) {
+        return NextResponse.json(
+          { success: false, error: supabaseUpdateError.message || 'Failed to update Supabase user' },
+          { status: supabaseUpdateError.status ?? 400 }
+        )
+      }
+    }
+
+    const updateData: any = {}
+
+    if (firstName !== undefined) updateData.firstName = firstName
+    if (lastName !== undefined) updateData.lastName = lastName
+    if (email !== undefined) updateData.email = email
+    if (role !== undefined) updateData.role = nextRole
+    if (organizationId !== undefined) updateData.organizationId = organizationId
+    if (phone !== undefined) updateData.phone = phone
+    if (title !== undefined) updateData.title = title
+    if (barNumber !== undefined) updateData.barNumber = barNumber
+    if (biography !== undefined) updateData.biography = biography
+    if (avatar !== undefined) updateData.avatar = avatar
+    if (timezone !== undefined) updateData.timezone = timezone
+    if (isActive !== undefined) updateData.isActive = isActive
+
+    if (firstName !== undefined || lastName !== undefined) {
+      const newFirstName = firstName ?? existingUser.firstName
+      const newLastName = lastName ?? existingUser.lastName
+      updateData.fullName = `${newFirstName} ${newLastName}`.trim()
     }
 
     const updatedUser = await prisma.user.update({
@@ -163,26 +219,24 @@ export async function PUT(
           select: {
             id: true,
             name: true,
-            type: true
-          }
-        }
-      }
-    });
+            type: true,
+          },
+        },
+      },
+    })
 
-    // Remove password from response
-    const { password: _, ...userResponse } = updatedUser;
+    const { password: _password, ...userResponse } = updatedUser
 
     return NextResponse.json({
       success: true,
-      data: userResponse
-    });
-
+      data: userResponse,
+    })
   } catch (error) {
-    console.error('Error updating user:', error);
+    console.error('Error updating user:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -192,36 +246,49 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
-    const { id } = params;
+    const { id } = params
 
-    // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { id }
-    });
+      where: { id },
+    })
 
     if (!existingUser) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
-      );
+      )
     }
 
-    // Soft delete by setting isActive to false
+    const supabaseAdmin = getSupabaseAdminClient()
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'User management service unavailable' },
+        { status: 503 }
+      )
+    }
+
+    const { error: supabaseError } = await supabaseAdmin.auth.admin.deleteUser(id)
+    if (supabaseError) {
+      return NextResponse.json(
+        { success: false, error: supabaseError.message || 'Failed to delete Supabase user' },
+        { status: supabaseError.status ?? 400 }
+      )
+    }
+
     await prisma.user.update({
       where: { id },
-      data: { isActive: false }
-    });
+      data: { isActive: false },
+    })
 
     return NextResponse.json({
       success: true,
-      message: 'User deactivated successfully'
-    });
-
+      message: 'User deactivated successfully',
+    })
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error('Error deleting user:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
