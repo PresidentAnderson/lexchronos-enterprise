@@ -50,7 +50,10 @@ model User {
   notifications  Notification[]
   conflictChecks ConflictCheck[]
   conflictWaivers ConflictWaiver[]
-  
+
+  missionsCreated      Mission[]            @relation("MissionCreator")
+  missionObservations  MissionObservation[] @relation("MissionObservationAuthor")
+
   // Client Intake & CRM relations
   assignedLeads       Lead[]           @relation("LeadAssignee")
   leadActivities      LeadActivity[]   @relation("ActivityPerformer")
@@ -115,7 +118,8 @@ model Organization {
   trustLedgerEntries TrustLedgerEntry[]
   trustBalances   TrustBalance[]
   trustReconciliations TrustReconciliation[]
-  
+  missions        Mission[]
+
   // Client Intake & CRM relations
   leads               Lead[]           @relation("LeadOrganization")
   intakeForms         IntakeForm[]     @relation("IntakeFormOrganization")
@@ -186,7 +190,8 @@ model Case {
   conflictChecks ConflictCheck[]
   trustTransactions TrustTransaction[]
   trustLedgerEntries TrustLedgerEntry[]
-  
+  missions      Mission[]
+
   // Court Rules and Deadlines
   jurisdictionId    String?
   jurisdiction      Jurisdiction?      @relation("CaseJurisdiction", fields: [jurisdictionId], references: [id])
@@ -246,13 +251,14 @@ model Document {
   // Metadata
   tags          Json?        // Array of tags
   metadata      Json?        // Custom metadata
-  
+
   // Audit fields
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  
+
   // Relations
   evidence      Evidence[]
+  passages      EvidencePassage[]
   notes         Note[]
 
   @@map("documents")
@@ -260,6 +266,200 @@ model Document {
   @@index([caseId])
   @@index([category])
   @@index([uploadedById])
+}
+
+// ===== MISSION-AWARE EVIDENCE REVIEW MODELS =====
+model EvidencePassage {
+  id             String      @id @default(cuid())
+  documentId     String
+  document       Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  stableId       String
+  page           Int?
+  passageIndex   Int
+  charStart      Int?
+  charEnd        Int?
+  text           String
+  language       String?
+  detectedDates  Json?
+  detectedParties Json?
+  metadata       Json?
+  tokenCount     Int?
+  checksum       String?
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  embeddings     PassageEmbedding[]
+  supportEdges   SupportEdge[]
+  observations   MissionObservation[] @relation("ObservationPassage")
+
+  @@map("evidence_passages")
+  @@index([documentId])
+  @@unique([documentId, stableId])
+  @@unique([documentId, passageIndex])
+}
+
+model LegalArticle {
+  id            String               @id @default(cuid())
+  code          String
+  section       String
+  title         String
+  text          String
+  jurisdiction  String
+  canonicalUrl  String?
+  synonyms      Json?
+  metadata      Json?
+
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  elements      LegalArticleElement[]
+  supportEdges  SupportEdge[]
+  observations  MissionObservation[] @relation("ObservationArticle")
+
+  @@map("legal_articles")
+  @@unique([code, section, jurisdiction])
+}
+
+model LegalArticleElement {
+  id               String        @id @default(cuid())
+  articleId        String
+  article          LegalArticle  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  key              String
+  label            String
+  description      String?
+  canonicalText    String?
+  synonyms         Json?
+  proofRequirements Json?
+  metadata         Json?
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  supportEdges     SupportEdge[]
+  observations     MissionObservation[] @relation("ObservationElement")
+
+  @@map("legal_article_elements")
+  @@unique([articleId, key])
+}
+
+model Mission {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  caseId           String?
+  case             Case?        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdById      String?
+  createdBy        User?        @relation("MissionCreator", fields: [createdById], references: [id])
+  status           MissionStatus @default(DRAFT)
+  jurisdiction     String
+  claimsSummary    Json?
+  weighting        Json?
+  narrativeTheory  String?
+  retrievalPlan    Json?
+  lastPlannedAt    DateTime?
+  lastRunAt        DateTime?
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  supportEdges     SupportEdge[]
+  missionClaims    MissionClaim[]
+  observations     MissionObservation[]
+
+  @@map("missions")
+  @@index([organizationId])
+  @@index([caseId])
+  @@index([status])
+}
+
+model MissionClaim {
+  id            String    @id @default(cuid())
+  missionId     String
+  mission       Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  claim         String
+  jurisdiction  String
+  code          String?
+  section       String?
+  weight        Float      @default(1.0)
+  metadata      Json?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("mission_claims")
+  @@index([missionId])
+}
+
+model SupportEdge {
+  id               String                @id @default(cuid())
+  missionId        String
+  mission          Mission               @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  passageId        String
+  passage          EvidencePassage       @relation(fields: [passageId], references: [id], onDelete: Cascade)
+  articleId        String
+  article          LegalArticle          @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  elementId        String?
+  element          LegalArticleElement?  @relation(fields: [elementId], references: [id], onDelete: Cascade)
+  elementKey       String
+  lexicalScore     Float?
+  semanticScore    Float?
+  coverageScore    Float?
+  freshnessScore   Float?
+  credibilityScore Float?
+  totalScore       Float
+  rationale        Json?
+  status           SupportEdgeStatus     @default(PENDING)
+
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@map("support_edges")
+  @@index([missionId])
+  @@index([articleId])
+  @@index([passageId])
+  @@index([elementId])
+}
+
+model MissionObservation {
+  id           String                @id @default(cuid())
+  missionId    String
+  mission      Mission               @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?                 @relation("MissionObservationAuthor", fields: [userId], references: [id])
+  passageId    String?
+  passage      EvidencePassage?      @relation("ObservationPassage", fields: [passageId], references: [id])
+  articleId    String?
+  article      LegalArticle?         @relation("ObservationArticle", fields: [articleId], references: [id])
+  elementId    String?
+  element      LegalArticleElement?  @relation("ObservationElement", fields: [elementId], references: [id])
+  type         MissionObservationType
+  payload      Json?
+  effect       Json?
+
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@map("mission_observations")
+  @@index([missionId])
+  @@index([userId])
+}
+
+model PassageEmbedding {
+  id          String          @id @default(cuid())
+  passageId   String
+  passage     EvidencePassage @relation(fields: [passageId], references: [id], onDelete: Cascade)
+  space       EmbeddingSpace
+  model       String
+  dimensions  Int
+  vector      Json
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("passage_embeddings")
+  @@unique([passageId, space])
+  @@index([space])
 }
 
 // ===== TIMELINES MODEL =====
@@ -1660,6 +1860,33 @@ enum ReconciliationStatus {
   DISCREPANCY
   REVIEWED
   APPROVED
+}
+
+enum EmbeddingSpace {
+  GENERAL
+  LEGAL
+}
+
+enum MissionStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum SupportEdgeStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum MissionObservationType {
+  CONFIRM_SUPPORT
+  DENY_SUPPORT
+  ADJUST_WEIGHT
+  ADD_THEORY
+  FLAG_CONTRADICTION
+  NOTE
 }
 
 // ===== COURT RULES AND DEADLINES MODELS =====
