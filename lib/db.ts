@@ -1,12 +1,42 @@
-import { PrismaClient } from '@prisma/client';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
+type PrismaClient = any;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+const isDatabaseDisabled = process.env.DISABLE_DATABASE === 'true';
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+function createMockPrisma(): PrismaClient {
+  return new Proxy(
+    {},
+    {
+      get: () => () => {
+        throw new Error('Database access is disabled in demo mode.');
+      }
+    }
+  );
+}
+
+const prismaInstance: PrismaClient = (() => {
+  if (isDatabaseDisabled) {
+    return createMockPrisma();
+  }
+
+  const { PrismaClient: ActualPrismaClient } = require('@prisma/client');
+  const client = globalForPrisma.prisma ?? new ActualPrismaClient();
+
+  if (process.env.NODE_ENV !== 'production') {
+    globalForPrisma.prisma = client;
+  }
+
+  return client;
+})();
+
+export const prisma: PrismaClient = prismaInstance;
 
 // Database utility functions for legal case management
 

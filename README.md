@@ -125,6 +125,16 @@ npm run build
 npm start
 ```
 
+## 🧪 Demo Export Mode
+
+The Netlify-friendly static export pipeline runs in a demo mode that disables all real database activity:
+
+- `./build.sh` sets `DISABLE_DATABASE=true` and loads stub credentials so the build can complete without external services.
+- The shared Prisma proxy in [`lib/db.ts`](./lib/db.ts) returns a throwing mock client whenever the database is disabled. Any runtime access during the export will surface an explicit error.
+- Developers who need full Prisma access locally should unset `DISABLE_DATABASE` and run `npx prisma generate` before starting the app or executing tests.
+
+This separation keeps demo deployments safe while preserving the production-ready Prisma workflow for real environments.
+
 ## 📖 Documentation
 
 ### **For Users**

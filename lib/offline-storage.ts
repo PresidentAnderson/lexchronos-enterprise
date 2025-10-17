@@ -435,7 +435,17 @@ class OfflineStorage {
 }
 
 // Create singleton instance
-export const offlineStorage = new OfflineStorage();
+const offlineStorageFallback: OfflineStorage = new Proxy(
+  {} as OfflineStorage,
+  {
+    get: () => async () => {
+      throw new Error('Offline storage is unavailable in this environment.');
+    }
+  }
+) as OfflineStorage;
+
+export const offlineStorage =
+  typeof window !== 'undefined' ? new OfflineStorage() : offlineStorageFallback;
 
 // Auto-setup sync listeners
 if (typeof window !== 'undefined') {
@@ -449,32 +459,41 @@ export function useOfflineStorage<T>(storeName: string, id?: string) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isBrowser = typeof window !== 'undefined';
+
+  const loadData = async () => {
+    if (!isBrowser) {
+      setLoading(false);
+      setData((id ? null : ([] as unknown as T)) ?? null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (id) {
+        const item = await offlineStorage.get(storeName, id);
+        setData(item?.data || null);
+      } else {
+        const items = await offlineStorage.getAll(storeName);
+        setData(items.map(item => item.data) as any);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('Error loading offline data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        if (id) {
-          const item = await offlineStorage.get(storeName, id);
-          setData(item?.data || null);
-        } else {
-          const items = await offlineStorage.getAll(storeName);
-          setData(items.map(item => item.data) as any);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        console.error('Error loading offline data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
-  }, [storeName, id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeName, id, isBrowser]);
 
   const save = async (newData: T) => {
+    if (!isBrowser) return;
     try {
       await offlineStorage.save(storeName, newData);
       setData(newData);
@@ -485,6 +504,7 @@ export function useOfflineStorage<T>(storeName: string, id?: string) {
   };
 
   const remove = async (itemId: string) => {
+    if (!isBrowser) return;
     try {
       await offlineStorage.delete(storeName, itemId);
       if (Array.isArray(data)) {
@@ -498,5 +518,5 @@ export function useOfflineStorage<T>(storeName: string, id?: string) {
     }
   };
 
-  return { data, loading, error, save, remove, reload: () => loadData() };
+  return { data, loading, error, save, remove, reload: loadData };
 }

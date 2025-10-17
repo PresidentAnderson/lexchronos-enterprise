@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth/jwt';
 import { ConflictCheckSchema } from '@/lib/validation/schemas';
-
-const prisma = new PrismaClient();
 
 // POST /api/conflicts/check - Perform conflict check
 export async function POST(request: NextRequest) {
@@ -17,6 +15,11 @@ export async function POST(request: NextRequest) {
     const validatedData = ConflictCheckSchema.parse(body);
 
     // Create the conflict check record
+    const organizationId = user.organizationId ?? user.firmId;
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization context required' }, { status: 400 });
+    }
+
     const conflictCheck = await prisma.conflictCheck.create({
       data: {
         checkType: validatedData.checkType,
@@ -24,7 +27,7 @@ export async function POST(request: NextRequest) {
         caseId: validatedData.caseId,
         searchTerms: validatedData.searchTerms,
         searchScope: validatedData.searchScope || 'FULL',
-        organizationId: user.organizationId,
+        organizationId,
         performedById: user.id,
         status: 'IN_PROGRESS',
       },
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Perform the actual conflict search
     const conflictResults = await performConflictSearch(
-      user.organizationId,
+      organizationId,
       validatedData.searchTerms,
       validatedData.searchScope || 'FULL',
       validatedData.entityId
@@ -86,8 +89,13 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '25');
 
+    const organizationId = user.organizationId ?? user.firmId;
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization context required' }, { status: 400 });
+    }
+
     const where: any = {
-      organizationId: user.organizationId,
+      organizationId,
     };
 
     if (caseId) {
@@ -195,7 +203,10 @@ async function performConflictSearch(
 
     // Search for related entities if scope includes them
     if (scope === 'RELATED_ENTITIES' || scope === 'FULL') {
-      const relatedEntities = await findRelatedEntities(organizationId, matchingEntities.map(e => e.id));
+      const relatedEntities = await findRelatedEntities(
+        organizationId,
+        matchingEntities.map((entity: { id: string }) => entity.id)
+      );
       for (const related of relatedEntities) {
         conflicts.push({
           type: 'RELATED_ENTITY',
@@ -246,7 +257,7 @@ async function findRelatedEntities(organizationId: string, entityIds: string[]):
     },
   });
 
-  return relationships.map(rel => ({
+  return relationships.map((rel: { fromEntityId: string; toEntity: any; fromEntity: any }) => ({
     entity: rel.fromEntityId in entityIds ? rel.toEntity : rel.fromEntity,
     relationship: rel,
   }));
@@ -274,7 +285,7 @@ async function findCaseConflicts(organizationId: string, term: string, excludeEn
     },
   });
 
-  return cases.map(case_ => ({
+  return cases.map((case_: Record<string, unknown>) => ({
     type: 'CASE_CONFLICT',
     case: case_,
     searchTerm: term,

@@ -5,7 +5,7 @@ import { Navigation } from "@/components/navigation";
 import { DocumentViewer, type Document } from "@/components/document-viewer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, Folder, HardDrive, Cloud, Star } from "lucide-react";
+import { FileText, Upload, Folder, HardDrive, Cloud, Star, Clock } from "lucide-react";
 import Link from "next/link";
 
 // Mock user data

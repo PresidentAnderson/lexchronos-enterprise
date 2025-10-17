@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth/jwt'
 import { z } from 'zod'
 import { validateRequest } from '@/lib/validation'
-
-const prisma = new PrismaClient()
 
 // Validation schemas
 const bulkApprovalSchema = z.object({

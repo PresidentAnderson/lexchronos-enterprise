@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth/jwt';
-
-const prisma = new PrismaClient();
 
 // GET /api/conflicts/stats - Get conflict dashboard statistics
 export async function GET(request: NextRequest) {
@@ -152,15 +150,24 @@ export async function GET(request: NextRequest) {
       conflictRate: parseFloat(conflictRate),
       recentActivity,
       distributions: {
-        conflictLevels: conflictLevels.reduce((acc, item) => {
+        conflictLevels: conflictLevels.reduce((
+          acc: Record<string, number>,
+          item: { conflictLevel: string; _count: { conflictLevel: number } }
+        ) => {
           acc[item.conflictLevel] = item._count.conflictLevel;
           return acc;
         }, {} as Record<string, number>),
-        checkTypes: checkTypes.reduce((acc, item) => {
+        checkTypes: checkTypes.reduce((
+          acc: Record<string, number>,
+          item: { checkType: string; _count: { checkType: number } }
+        ) => {
           acc[item.checkType] = item._count.checkType;
           return acc;
         }, {} as Record<string, number>),
-        entityTypes: entityTypes.reduce((acc, item) => {
+        entityTypes: entityTypes.reduce((
+          acc: Record<string, number>,
+          item: { type: string; _count: { type: number } }
+        ) => {
           acc[item.type] = item._count.type;
           return acc;
         }, {} as Record<string, number>)

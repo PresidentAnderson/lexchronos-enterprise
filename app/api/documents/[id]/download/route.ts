@@ -4,6 +4,8 @@ import path from 'path';
 import { existsSync } from 'fs';
 import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 
 interface RouteParams {

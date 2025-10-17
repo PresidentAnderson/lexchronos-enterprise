@@ -96,7 +96,14 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate totals for the current page
-    const totals = result.data.reduce((acc, entry) => {
+    const pageEntries = result.data as Array<{
+      type: string;
+      hours?: number | null;
+      hourlyRate?: number | null;
+      amount?: number | null;
+    }>;
+
+    const totals = pageEntries.reduce((acc, entry) => {
       if (entry.type === 'TIME' && entry.hours && entry.hourlyRate) {
         acc.timeTotal += entry.hours * entry.hourlyRate;
         acc.totalHours += entry.hours;
