@@ -28,6 +28,7 @@ For developers working with LexChronos:
 For system administrators and practice managers:
 
 - **[Admin Dashboard Guide](./admin/admin-guide.md)** - Administrative interface overview
+- **[Canada Arrest Playbook](./admin/canada-arrest-playbook.md)** - Statute-aligned arrest checklist and scripts for Canadian agencies
 - **[User Management](./admin/user-management.md)** - Managing users, roles, and organizations
 - **[System Configuration](./admin/system-configuration.md)** - System settings and customization
 - **[Monitoring Guide](./admin/monitoring.md)** - System health and performance monitoring
