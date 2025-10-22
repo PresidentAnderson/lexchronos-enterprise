@@ -129,21 +129,21 @@ export async function GET(request: NextRequest) {
 
     // Transform results
     const byCategory: Record<string, number> = {};
-    categoryStats.forEach(stat => {
+    categoryStats.forEach((stat: { category: string | null; _count: { category: number } }) => {
       if (stat.category) {
         byCategory[stat.category] = stat._count.category;
       }
     });
 
     const byType: Record<string, number> = {};
-    typeStats.forEach(stat => {
+    typeStats.forEach((stat: { type: string | null; _count: { type: number } }) => {
       if (stat.type) {
         byType[stat.type] = stat._count.type;
       }
     });
 
     const byConfidentiality: Record<string, number> = {};
-    confidentialityStats.forEach(stat => {
+    confidentialityStats.forEach((stat: { confidentialityLevel: string | null; _count: { confidentialityLevel: number } }) => {
       if (stat.confidentialityLevel) {
         byConfidentiality[stat.confidentialityLevel] = stat._count.confidentialityLevel;
       }
