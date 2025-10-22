@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
-  // Static export configuration for demo
-  output: 'export',
+  // Remove static export for Netlify Functions support
   trailingSlash: true,
   
-  // Disable features not supported in static export
+  // Images configuration for Netlify
   images: {
     unoptimized: true,
   },
@@ -19,11 +18,16 @@ const nextConfig = {
 
   // Webpack configuration
   webpack: (config, { isServer }) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
-    };
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+        stream: false,
+        buffer: false,
+      };
+    }
 
     config.ignoreWarnings = [
       /Critical dependency: the request of a dependency is an expression/,
@@ -33,18 +37,9 @@ const nextConfig = {
     return config;
   },
 
-  // Environment variables for demo
-  env: {
-    DEMO_MODE: 'true',
-    DISABLE_DATABASE: 'true',
-  },
-
-  // Skip type and lint checks during demo builds
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
+  // Build optimizations
+  experimental: {
+    outputFileTracingRoot: process.cwd(),
   },
 };
 
