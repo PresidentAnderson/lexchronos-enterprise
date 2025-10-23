@@ -47,7 +47,7 @@ const customJestConfig = {
   testEnvironment: 'jsdom',
   
   // Module name mapping for static assets and styles
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@/components/(.*)$': '<rootDir>/components/$1',
     '^@/lib/(.*)$': '<rootDir>/lib/$1',

@@ -1,8 +1,8 @@
 import React from 'react'
 import { render } from '@testing-library/react'
 import { axe, toHaveNoViolations } from 'jest-axe'
-import { Button } from '../../components/ui/Button'
-import { TimerWidget } from '../../components/ui/TimerWidget'
+import { Button } from '@/components/ui/button'
+import { TimerWidget } from '@/components/ui/TimerWidget'
 
 // Extend Jest matchers
 expect.extend(toHaveNoViolations)

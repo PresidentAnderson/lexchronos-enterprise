@@ -1,8 +1,8 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Button } from '../../components/ui/Button'
-import { TimerWidget } from '../../components/ui/TimerWidget'
+import { Button } from '@/components/ui/button'
+import { TimerWidget } from '@/components/ui/TimerWidget'
 
 // Mock projects data
 const mockProjects = [
