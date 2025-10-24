@@ -449,7 +449,7 @@ export async function checkUsageLimits(lawFirmId: string) {
   }
 }
 
-// Payment method functions for Stripe integration
+// Payment-related functions
 
 // Upsert payment method
 export async function upsertPaymentMethod(data: {
@@ -495,6 +495,7 @@ export async function upsertPaymentMethod(data: {
 // Update payment record
 export async function updatePaymentRecord(paymentId: string, data: {
   status?: string;
+  amount?: number;
   refundAmount?: number;
   refundReason?: string;
   metadata?: any;
@@ -504,6 +505,7 @@ export async function updatePaymentRecord(paymentId: string, data: {
       where: { id: paymentId },
       data: {
         status: data.status,
+        amount: data.amount,
         refundAmount: data.refundAmount,
         refundReason: data.refundReason,
         metadata: data.metadata,
@@ -516,17 +518,19 @@ export async function updatePaymentRecord(paymentId: string, data: {
   }
 }
 
+// Subscription-related functions
+
 // Get subscription by Stripe ID
 export async function getSubscriptionByStripeId(stripeSubscriptionId: string) {
   try {
-    return await prisma.subscription.findFirst({
+    return await prisma.subscription.findUnique({
       where: { stripeSubscriptionId },
       include: {
         organization: true
       }
     });
   } catch (error) {
-    console.error('Error fetching subscription by Stripe ID:', error);
+    console.error('Error getting subscription by Stripe ID:', error);
     return null;
   }
 }
@@ -536,6 +540,7 @@ export async function updateSubscriptionRecord(subscriptionId: string, data: {
   status?: string;
   currentPeriodStart?: Date;
   currentPeriodEnd?: Date;
+  cancelAt?: Date;
   cancelAtPeriodEnd?: boolean;
   canceledAt?: Date;
   metadata?: any;
@@ -547,6 +552,7 @@ export async function updateSubscriptionRecord(subscriptionId: string, data: {
         status: data.status,
         currentPeriodStart: data.currentPeriodStart,
         currentPeriodEnd: data.currentPeriodEnd,
+        cancelAt: data.cancelAt,
         cancelAtPeriodEnd: data.cancelAtPeriodEnd,
         canceledAt: data.canceledAt,
         metadata: data.metadata,
