@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 import {
   OffenceAutomationAction,
   OffenceAutomationTrigger,
@@ -159,11 +161,13 @@ function buildInclude(options: {
   return include;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const sectionCode = searchParams.get('sectionCode') ?? undefined;
-    const organizationId = searchParams.get('organizationId') ?? undefined;
+
+    // SECURITY: Use authenticated user's organization for filtering
+    const userOrganizationId = user.organizationId;
     const category = searchParams.get('category') ?? undefined;
     const severity = searchParams.get('severity') ?? undefined;
     const search = searchParams.get('search') ?? undefined;
@@ -184,8 +188,14 @@ export async function GET(request: NextRequest) {
       where.sectionCode = sectionCode;
     }
 
-    if (organizationId) {
-      where.organizationId = organizationId;
+    // SECURITY: Filter by user's organization or show only public modules
+    if (userOrganizationId) {
+      where.OR = [
+        { organizationId: userOrganizationId },
+        { organizationId: null } // Public/global modules
+      ];
+    } else {
+      where.organizationId = null; // Only public modules if no org
     }
 
     if (category) {
@@ -272,10 +282,18 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
+    // SECURITY: Only admins can create priority offence modules
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Only administrators can create priority offence modules' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const parsed = createModuleSchema.safeParse(body);
 
@@ -296,10 +314,13 @@ export async function POST(request: NextRequest) {
       ...moduleData
     } = parsed.data;
 
+    // SECURITY: Use authenticated user's organization unless creating a public module
+    const finalOrganizationId = organizationId || user.organizationId;
+
     const uniqueWhere = {
       sectionCode_organizationId: {
         sectionCode: moduleData.sectionCode,
-        organizationId: organizationId ?? null
+        organizationId: finalOrganizationId ?? null
       }
     } as const;
 
@@ -317,7 +338,7 @@ export async function POST(request: NextRequest) {
     const createdModule = await prisma.priorityOffenceModule.create({
       data: {
         ...moduleData,
-        organizationId: organizationId ?? null,
+        organizationId: finalOrganizationId ?? null,
         tags: tags ?? [],
         elements: {
           create: elements.map((element) => ({
@@ -357,4 +378,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

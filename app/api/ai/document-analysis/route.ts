@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openAIClient } from '@/lib/ai/openai-client';
 import { prisma } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
 interface AnalysisRequest {
   documentId: string;
@@ -47,22 +49,24 @@ interface DocumentAnalysis {
   processingTime: number;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
     const caseId = searchParams.get('caseId');
     const documentId = searchParams.get('documentId');
 
-    if (!organizationId) {
+    // SECURITY: Use authenticated user's organization
+    const userOrganizationId = user.organizationId;
+
+    if (!userOrganizationId) {
       return NextResponse.json(
-        { success: false, error: 'organizationId is required' },
-        { status: 400 }
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
       );
     }
 
     // Build query filters
-    const where: any = { organizationId };
+    const where: any = { organizationId: userOrganizationId };
     if (caseId) where.caseId = caseId;
     if (documentId) where.documentId = documentId;
 
@@ -96,28 +100,38 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   const startTime = Date.now();
-  
+
   try {
     const body: AnalysisRequest = await request.json();
-    const { documentId, organizationId, caseId, analysisTypes } = body;
+    const { documentId, caseId, analysisTypes } = body;
+
+    // SECURITY: Use authenticated user's organization
+    const userOrganizationId = user.organizationId;
+
+    if (!userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
 
     // Validate required fields
-    if (!documentId || !organizationId || !analysisTypes?.length) {
+    if (!documentId || !analysisTypes?.length) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Get document
+    // Get document and verify organization access
     const document = await prisma.document.findFirst({
       where: {
         id: documentId,
-        organizationId
+        organizationId: userOrganizationId
       }
     });
 
@@ -132,7 +146,7 @@ export async function POST(request: NextRequest) {
     const existingAnalysis = await prisma.documentAnalysis.findFirst({
       where: {
         documentId,
-        organizationId
+        organizationId: userOrganizationId
       }
     });
 
@@ -154,7 +168,7 @@ export async function POST(request: NextRequest) {
       where: {
         documentId_organizationId: {
           documentId,
-          organizationId
+          organizationId: userOrganizationId
         }
       },
       update: {
@@ -183,7 +197,7 @@ export async function POST(request: NextRequest) {
       },
       create: {
         documentId,
-        organizationId,
+        organizationId: userOrganizationId,
         caseId,
         summary: analysis.summary,
         keyPoints: analysis.keyPoints,
@@ -224,7 +238,7 @@ export async function POST(request: NextRequest) {
         action: 'AI_DOCUMENT_ANALYSIS',
         entityType: 'DOCUMENT',
         entityId: documentId,
-        organizationId,
+        organizationId: userOrganizationId,
         details: {
           analysisTypes,
           processingTime,
@@ -251,7 +265,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Perform comprehensive AI analysis on a document

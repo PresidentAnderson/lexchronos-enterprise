@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openAIClient } from '@/lib/ai/openai-client';
 import { prisma } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
 interface Evidence {
   title: string;
@@ -24,20 +26,29 @@ interface TimelineRequest {
   customPrompt?: string;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body: TimelineRequest = await request.json();
-    
+
     const {
       caseId,
-      organizationId,
       evidence,
       analysisMode = 'chronological',
       customPrompt
     } = body;
 
+    // SECURITY: Use authenticated user's organization
+    const userOrganizationId = user.organizationId;
+
+    if (!userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
+
     // Validate required fields
-    if (!caseId || !organizationId || !evidence || evidence.length === 0) {
+    if (!caseId || !evidence || evidence.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields or evidence' },
         { status: 400 }
@@ -48,7 +59,7 @@ export async function POST(request: NextRequest) {
     const caseRecord = await prisma.case.findFirst({
       where: {
         id: caseId,
-        organizationId
+        organizationId: userOrganizationId
       },
       select: {
         id: true,
@@ -66,9 +77,9 @@ export async function POST(request: NextRequest) {
 
     // Generate timeline using AI
     const timeline = await generateTimelineWithAI(evidence, analysisMode, customPrompt);
-    
+
     // Save timeline to database
-    const savedTimeline = await saveTimelineToDatabase(caseId, organizationId, timeline);
+    const savedTimeline = await saveTimelineToDatabase(caseId, userOrganizationId, timeline);
 
     // Create audit log entry
     await prisma.auditLog.create({
@@ -76,7 +87,7 @@ export async function POST(request: NextRequest) {
         action: 'AI_TIMELINE_GENERATED',
         entityType: 'CASE',
         entityId: caseId,
-        organizationId,
+        organizationId: userOrganizationId,
         details: {
           evidenceCount: evidence.length,
           timelineEvents: timeline.length,
@@ -111,7 +122,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Generate timeline using OpenAI
