@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, paginate } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
 // GET /api/billing - Get all billing entries with pagination
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -19,8 +21,10 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // Build where clause
-    const where: any = {};
+    // SECURITY: Filter by user's organization to ensure data isolation
+    const where: any = {
+      organizationId: user.organizationId || organizationId
+    };
     
     if (search) {
       where.OR = [
@@ -32,10 +36,6 @@ export async function GET(request: NextRequest) {
       where.caseId = caseId;
     }
 
-    if (organizationId) {
-      where.organizationId = organizationId;
-    }
-    
     if (userId) {
       where.userId = userId;
     }
@@ -130,10 +130,10 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/billing - Create new billing entry
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body = await request.json();
     const {
@@ -157,11 +157,22 @@ export async function POST(request: NextRequest) {
       notes
     } = body;
 
+    // SECURITY: Use authenticated user's organization and user ID
+    const userOrganizationId = user.organizationId || organizationId;
+    const userUserId = user.userId;
+
     // Validate required fields
-    if (!description || !organizationId || !caseId || !userId) {
+    if (!description || !caseId) {
       return NextResponse.json(
-        { success: false, error: 'Description, organizationId, caseId, and userId are required' },
+        { success: false, error: 'Description and caseId are required' },
         { status: 400 }
+      );
+    }
+
+    if (!userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
       );
     }
 
@@ -196,22 +207,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (caseData.organizationId !== organizationId) {
+    if (caseData.organizationId !== userOrganizationId) {
       return NextResponse.json(
         { success: false, error: 'Case does not belong to this organization' },
         { status: 400 }
-      );
-    }
-
-    // Validate user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
       );
     }
 
@@ -236,9 +235,9 @@ export async function POST(request: NextRequest) {
         date: new Date(date),
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,
-        organizationId,
+        organizationId: userOrganizationId,
         caseId,
-        userId,
+        userId: userUserId,
         isBillable,
         task,
         category,
@@ -275,4 +274,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

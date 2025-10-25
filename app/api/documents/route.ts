@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, paginate } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
 // GET /api/documents - Get all documents with pagination
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -16,8 +18,10 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type');
     const uploadedById = searchParams.get('uploadedById');
 
-    // Build where clause
-    const where: any = {};
+    // SECURITY: Filter by user's organization to ensure data isolation
+    const where: any = {
+      organizationId: user.organizationId || organizationId
+    };
     
     if (search) {
       where.OR = [
@@ -32,10 +36,6 @@ export async function GET(request: NextRequest) {
       where.caseId = caseId;
     }
 
-    if (organizationId) {
-      where.organizationId = organizationId;
-    }
-    
     if (category) {
       where.category = category;
     }
@@ -106,10 +106,10 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/documents - Create new document record (metadata only)
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body = await request.json();
     const {
@@ -133,17 +133,28 @@ export async function POST(request: NextRequest) {
       checksum
     } = body;
 
+    // SECURITY: Use authenticated user's organization and user ID
+    const userOrganizationId = user.organizationId || organizationId;
+    const userUploaderId = user.userId;
+
     // Validate required fields
-    if (!title || !fileName || !filePath || !organizationId || !uploadedById) {
+    if (!title || !fileName || !filePath) {
       return NextResponse.json(
-        { success: false, error: 'Title, fileName, filePath, organizationId, and uploadedById are required' },
+        { success: false, error: 'Title, fileName, and filePath are required' },
         { status: 400 }
+      );
+    }
+
+    if (!userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
       );
     }
 
     // Validate organization exists
     const organization = await prisma.organization.findUnique({
-      where: { id: organizationId }
+      where: { id: userOrganizationId }
     });
 
     if (!organization) {
@@ -166,24 +177,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (caseData.organizationId !== organizationId) {
+      if (caseData.organizationId !== userOrganizationId) {
         return NextResponse.json(
           { success: false, error: 'Case does not belong to this organization' },
           { status: 400 }
         );
       }
-    }
-
-    // Validate uploader exists
-    const uploader = await prisma.user.findUnique({
-      where: { id: uploadedById }
-    });
-
-    if (!uploader) {
-      return NextResponse.json(
-        { success: false, error: 'Uploader not found' },
-        { status: 404 }
-      );
     }
 
     // Validate parent document if versioning
@@ -214,9 +213,9 @@ export async function POST(request: NextRequest) {
         isConfidential,
         version,
         parentId,
-        organizationId,
+        organizationId: userOrganizationId,
         caseId,
-        uploadedById,
+        uploadedById: userUploaderId,
         tags,
         metadata,
         checksum,
@@ -259,4 +258,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

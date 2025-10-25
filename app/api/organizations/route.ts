@@ -1,9 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, paginate } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
-// GET /api/organizations - Get all organizations with pagination
-export async function GET(request: NextRequest) {
+// GET /api/organizations - Get all organizations with pagination (Admin only)
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
+    // SECURITY: Only ADMIN and SUPER_ADMIN can list all organizations
+    // Regular users can only see their own organization
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      if (!user.organizationId) {
+        return NextResponse.json(
+          { success: false, error: 'Access denied' },
+          { status: 403 }
+        );
+      }
+
+      // Return only user's organization
+      const organization = await prisma.organization.findUnique({
+        where: { id: user.organizationId },
+        include: {
+          _count: {
+            select: {
+              users: true,
+              cases: true,
+              documents: true,
+              timelines: true,
+              billingEntries: true,
+              courtDates: true,
+              evidence: true,
+              notes: true
+            }
+          }
+        }
+      });
+
+      if (!organization) {
+        return NextResponse.json(
+          { success: false, error: 'Organization not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: [organization],
+        pagination: { page: 1, limit: 1, total: 1, pages: 1 }
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -66,11 +111,19 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-// POST /api/organizations - Create new organization
-export async function POST(request: NextRequest) {
+// POST /api/organizations - Create new organization (Admin only)
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
+    // SECURITY: Only SUPER_ADMIN can create organizations
+    if (user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Only super admins can create organizations' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       name,
@@ -154,4 +207,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
