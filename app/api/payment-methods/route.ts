@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
+import {
   getCustomerPaymentMethods,
   setDefaultPaymentMethod,
   stripe
 } from '@/lib/stripe';
-import { 
+import {
   getLawFirmWithSubscription,
   upsertPaymentMethod
 } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
 // Set default payment method schema
@@ -17,21 +19,32 @@ const setDefaultSchema = z.object({
 });
 
 // GET /api/payment-methods - Get payment methods for a law firm
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const lawFirmId = searchParams.get('lawFirmId');
     const type = searchParams.get('type') as 'card' | 'us_bank_account' | null;
 
-    if (!lawFirmId) {
+    // SECURITY: Use authenticated user's organization
+    const userOrganizationId = user.organizationId;
+
+    if (!userOrganizationId) {
       return NextResponse.json(
-        { success: false, error: 'Law firm ID is required' },
-        { status: 400 }
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Verify user can only access their own organization's payment methods
+    if (lawFirmId && lawFirmId !== userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied to payment methods of other organizations' },
+        { status: 403 }
       );
     }
 
     // Get law firm with Stripe customer ID
-    const lawFirm = await getLawFirmWithSubscription(lawFirmId);
+    const lawFirm = await getLawFirmWithSubscription(userOrganizationId);
     if (!lawFirm || !lawFirm.stripeCustomerId) {
       return NextResponse.json(
         { success: false, error: 'Law firm not found or missing Stripe customer' },
@@ -85,15 +98,31 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/payment-methods - Set default payment method
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body = await request.json();
     const validatedData = setDefaultSchema.parse(body);
 
     const { lawFirmId, paymentMethodId } = validatedData;
+
+    // SECURITY: Verify user can only modify their own organization's payment methods
+    if (lawFirmId !== user.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied to payment methods of other organizations' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Only ADMIN and SUPER_ADMIN can modify payment methods
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Only administrators can modify payment methods' },
+        { status: 403 }
+      );
+    }
 
     // Get law firm with Stripe customer ID
     const lawFirm = await getLawFirmWithSubscription(lawFirmId);
@@ -163,18 +192,35 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE /api/payment-methods/[id] - Remove payment method
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const paymentMethodId = searchParams.get('id');
+    const lawFirmId = searchParams.get('lawFirmId');
 
     if (!paymentMethodId) {
       return NextResponse.json(
         { success: false, error: 'Payment method ID is required' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY: Verify user can only delete their own organization's payment methods
+    if (lawFirmId && lawFirmId !== user.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied to payment methods of other organizations' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Only ADMIN and SUPER_ADMIN can delete payment methods
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Only administrators can delete payment methods' },
+        { status: 403 }
       );
     }
 
@@ -193,4 +239,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

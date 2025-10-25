@@ -4,12 +4,14 @@ import { existsSync } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { prisma } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '10485760'); // 10MB
 
 // POST /api/documents/upload - Upload document file and create record
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const formData = await request.formData();
     
@@ -21,9 +23,27 @@ export async function POST(request: NextRequest) {
     const isConfidential = formData.get('isConfidential') === 'true';
     const organizationId = formData.get('organizationId') as string;
     const caseId = formData.get('caseId') as string;
-    const uploadedById = formData.get('uploadedById') as string;
     const tags = formData.get('tags') ? JSON.parse(formData.get('tags') as string) : null;
     const metadata = formData.get('metadata') ? JSON.parse(formData.get('metadata') as string) : null;
+
+    // SECURITY: Use authenticated user's organization and user ID
+    const userOrganizationId = user.organizationId;
+    const userUploaderId = user.userId;
+
+    if (!userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Verify user can only upload to their own organization
+    if (organizationId && organizationId !== userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot upload documents to other organizations' },
+        { status: 403 }
+      );
+    }
 
     if (!file) {
       return NextResponse.json(
@@ -32,9 +52,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!title || !organizationId || !uploadedById) {
+    if (!title) {
       return NextResponse.json(
-        { success: false, error: 'Title, organizationId, and uploadedById are required' },
+        { success: false, error: 'Title is required' },
         { status: 400 }
       );
     }
@@ -49,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Validate organization exists
     const organization = await prisma.organization.findUnique({
-      where: { id: organizationId }
+      where: { id: userOrganizationId }
     });
 
     if (!organization) {
@@ -72,7 +92,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (caseData.organizationId !== organizationId) {
+      if (caseData.organizationId !== userOrganizationId) {
         return NextResponse.json(
           { success: false, error: 'Case does not belong to this organization' },
           { status: 400 }
@@ -81,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create upload directory if it doesn't exist
-    const orgUploadDir = path.join(UPLOAD_DIR, organizationId);
+    const orgUploadDir = path.join(UPLOAD_DIR, userOrganizationId);
     if (!existsSync(orgUploadDir)) {
       await mkdir(orgUploadDir, { recursive: true });
     }
@@ -92,12 +112,13 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const uniqueFileName = `${baseFileName}_${timestamp}${fileExtension}`;
     const filePath = path.join(orgUploadDir, uniqueFileName);
-    const relativeFilePath = path.join(organizationId, uniqueFileName);
+    const relativeFilePath = path.join(userOrganizationId, uniqueFileName);
 
     // Convert file to buffer and calculate checksum
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const checksum = crypto.createHash('md5').update(buffer).digest('hex');
+    // SECURITY: Use SHA-256 instead of MD5 (MD5 is cryptographically broken)
+    const checksum = crypto.createHash('sha256').update(buffer).digest('hex');
 
     // Write file to disk
     await writeFile(filePath, buffer);
@@ -125,9 +146,9 @@ export async function POST(request: NextRequest) {
         category: category as any,
         type: docType as any,
         isConfidential,
-        organizationId,
+        organizationId: userOrganizationId,
         caseId: caseId || null,
-        uploadedById,
+        uploadedById: userUploaderId,
         tags,
         metadata,
         checksum,
@@ -158,12 +179,13 @@ export async function POST(request: NextRequest) {
     });
 
     // TODO: Queue for OCR processing if it's a PDF or image
-    // TODO: Queue for virus scanning
+    // TODO: Queue for virus scanning (CRITICAL SECURITY REQUIREMENT)
+    // TODO: Validate file type against magic bytes, not just MIME type
     // TODO: Generate thumbnail if it's an image
 
     return NextResponse.json(
-      { 
-        success: true, 
+      {
+        success: true,
         data: document,
         message: 'File uploaded successfully'
       },
@@ -177,10 +199,10 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // GET /api/documents/upload/progress/[uploadId] - Get upload progress (for chunked uploads)
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     // This would be implemented for large file chunked uploads
     // For now, return a simple response
@@ -195,4 +217,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

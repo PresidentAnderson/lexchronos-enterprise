@@ -3,6 +3,7 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth/jwt';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,15 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
+    // SECURITY: Authenticate request
+    const user = await auth(request);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const { id } = params;
     const { searchParams } = new URL(request.url);
     const inline = searchParams.get('inline') === 'true'; // For viewing in browser vs downloading
@@ -48,6 +58,14 @@ export async function GET(
       return NextResponse.json(
         { success: false, error: 'Document not found' },
         { status: 404 }
+      );
+    }
+
+    // SECURITY: Verify user can only download documents from their organization
+    if (document.organizationId !== user.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied to documents of other organizations' },
+        { status: 403 }
       );
     }
 
@@ -82,8 +100,8 @@ export async function GET(
     headers.set('X-Content-Type-Options', 'nosniff');
     headers.set('X-Frame-Options', 'DENY');
 
-    // Log download access
-    console.log(`Document downloaded: ${document.id} (${document.originalName}) by user request`);
+    // SECURITY: Log download access with user information for audit trail
+    console.log(`Document downloaded: ${document.id} (${document.originalName}) by user ${user.userId} (${user.email})`);
 
     return new NextResponse(new Uint8Array(fileBuffer), {
       status: 200,
@@ -105,6 +123,12 @@ export async function HEAD(
   { params }: RouteParams
 ) {
   try {
+    // SECURITY: Authenticate request
+    const user = await auth(request);
+    if (!user) {
+      return new NextResponse(null, { status: 401 });
+    }
+
     const { id } = params;
 
     // Get document record from database
@@ -114,12 +138,18 @@ export async function HEAD(
         mimeType: true,
         fileSize: true,
         originalName: true,
-        filePath: true
+        filePath: true,
+        organizationId: true
       }
     });
 
     if (!document) {
       return new NextResponse(null, { status: 404 });
+    }
+
+    // SECURITY: Verify user can only access documents from their organization
+    if (document.organizationId !== user.organizationId) {
+      return new NextResponse(null, { status: 403 });
     }
 
     // Build full file path
