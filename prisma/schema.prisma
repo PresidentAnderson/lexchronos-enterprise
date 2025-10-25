@@ -34,7 +34,7 @@ model User {
 
   // Organization association
   organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   // Audit fields
   createdAt DateTime @default(now())
@@ -165,7 +165,7 @@ model Case {
 
   // Organization & Assignment
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   assigneeId String?
   assignee   User?   @relation("CaseAssignee", fields: [assigneeId], references: [id])
@@ -233,10 +233,10 @@ model Document {
 
   // Organization & Case
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   caseId String?
-  case   Case?   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  case   Case?   @relation(fields: [caseId], references: [id], onDelete: Restrict)
 
   // Upload information
   uploadedById String
@@ -281,10 +281,10 @@ model Timeline {
 
   // Organization & Case
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   caseId String
-  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Restrict)
 
   // Creator
   createdById String
@@ -327,7 +327,7 @@ model Deadline {
 
   // Case association
   caseId String
-  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Restrict)
 
   // Assignment
   assignedTo String?
@@ -380,10 +380,10 @@ model BillingEntry {
 
   // Organization & Case
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   caseId String
-  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Restrict)
 
   // User who performed the work
   userId String
@@ -434,11 +434,11 @@ model CourtDate {
 
   // Case association
   caseId String
-  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Restrict)
 
   // Organization
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Attendees and preparation
   attendees   Json? // Array of attendee objects
@@ -488,11 +488,11 @@ model Evidence {
 
   // Case association
   caseId String
-  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Restrict)
 
   // Organization
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Document reference (if applicable)
   documentId String?
@@ -532,13 +532,13 @@ model Note {
 
   // Associations
   caseId String?
-  case   Case?   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  case   Case?   @relation(fields: [caseId], references: [id], onDelete: Restrict)
 
   documentId String?
-  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Restrict)
 
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Author
   authorId String
@@ -815,7 +815,7 @@ model Subscription {
 
   // Organization association
   organizationId String       @unique
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Subscription details
   status    SubscriptionStatus @default(INACTIVE)
@@ -887,7 +887,7 @@ model Payment {
 
   // Association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   subscriptionId String?
   subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
@@ -929,7 +929,7 @@ model PaymentMethod {
 
   // Organization association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Payment method details
   type        String  // card, bank_account, us_bank_account, sepa_debit, etc.
@@ -987,7 +987,7 @@ model Invoice {
 
   // Association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   subscriptionId String?
   subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
@@ -1109,7 +1109,7 @@ model ConflictEntity {
 
   // Organization association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Metadata
   isActive Boolean @default(true)
@@ -1201,7 +1201,7 @@ model ConflictCheck {
 
   // Organization association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Performed by
   performedById String
@@ -1259,7 +1259,7 @@ model ConflictWaiver {
 
   // Organization association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Metadata
   metadata Json?
@@ -1374,7 +1374,7 @@ model TrustAccount {
 
   // Organization association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Account managers
   primarySignatory String // User ID
@@ -1429,7 +1429,7 @@ model TrustTransaction {
   status TransactionStatus @default(PENDING)
 
   // Payment method details
-  paymentMethod PaymentMethod @default(CHECK)
+  paymentMethod PaymentType @default(CHECK)
   checkNumber   String?
   wireDetails   Json? // Wire transfer details
   cardDetails   Json? // Credit card details (tokenized)
@@ -1447,7 +1447,7 @@ model TrustTransaction {
 
   // Organization association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Metadata
   tags        Json? // Array of tags for categorization
@@ -1507,7 +1507,7 @@ model TrustLedgerEntry {
 
   // Organization association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Created by
   createdBy String // User ID
@@ -1554,7 +1554,7 @@ model TrustBalance {
 
   // Organization association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Calculated by
   calculatedBy String // User ID or system
@@ -1609,7 +1609,7 @@ model TrustReconciliation {
 
   // Organization association
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Performed by
   reconciledBy String // User ID
@@ -1662,7 +1662,7 @@ enum TransactionStatus {
   RECONCILED
 }
 
-enum PaymentMethod {
+enum PaymentType {
   CHECK
   WIRE_TRANSFER
   ACH
@@ -2179,7 +2179,7 @@ model Lead {
 
   // Organization
   organizationId String
-  organization   Organization @relation("LeadOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation("LeadOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Marketing tracking
   marketingData Json? // UTM parameters, campaign data, etc.
@@ -2276,7 +2276,7 @@ model IntakeForm {
 
   // Organization
   organizationId String
-  organization   Organization @relation("IntakeFormOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation("IntakeFormOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Metadata
   tags     Json? // Array of tags
@@ -2333,7 +2333,7 @@ model IntakeResponse {
 
   // Organization
   organizationId String
-  organization   Organization @relation("IntakeResponseOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation("IntakeResponseOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Metadata
   metadata Json? // Additional response metadata
@@ -2394,7 +2394,7 @@ model Communication {
 
   // Organization
   organizationId String
-  organization   Organization @relation("CommunicationOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation("CommunicationOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Metadata
   metadata Json? // Platform-specific metadata
@@ -2469,7 +2469,7 @@ model ClientProfile {
 
   // Organization
   organizationId String
-  organization   Organization @relation("ClientProfileOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation("ClientProfileOrganization", fields: [organizationId], references: [id], onDelete: Restrict)
 
   // Status
   isActive    Boolean  @default(true)
