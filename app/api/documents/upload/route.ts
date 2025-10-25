@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/middleware/auth';
 import { JWTPayload } from '@/lib/auth/jwt';
+import { virusScanner } from '@/lib/security/virus-scanner';
+import { fileTypeValidator } from '@/lib/security/file-type-validator';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '10485760'); // 10MB
@@ -120,8 +122,46 @@ export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
     // SECURITY: Use SHA-256 instead of MD5 (MD5 is cryptographically broken)
     const checksum = crypto.createHash('sha256').update(buffer).digest('hex');
 
-    // Write file to disk
+    // SECURITY: Validate file type using magic bytes (not just MIME type)
+    const fileTypeResult = fileTypeValidator.validateFileType(buffer, file.name, file.type);
+    if (!fileTypeResult.isValid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `File validation failed: ${fileTypeResult.error}`,
+          details: {
+            declaredExtension: path.extname(file.name).slice(1),
+            detectedType: fileTypeResult.detectedType,
+            detectedExtension: fileTypeResult.detectedExtension,
+            mismatch: fileTypeResult.mismatch
+          }
+        },
+        { status: 400 }
+      );
+    }
+
+    // Write file to disk temporarily for virus scanning
     await writeFile(filePath, buffer);
+
+    // SECURITY: Scan file for viruses and malware
+    const scanResult = await virusScanner.scanFile(filePath, buffer);
+    if (!scanResult.isClean) {
+      // Delete the infected file immediately
+      await unlink(filePath);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'File failed security scan',
+          details: {
+            threats: scanResult.threats,
+            scanEngine: scanResult.scanEngine,
+            message: 'The uploaded file was detected as malware and has been deleted'
+          }
+        },
+        { status: 400 }
+      );
+    }
 
     // Determine document type based on MIME type
     let docType = 'OTHER';

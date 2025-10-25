@@ -4,15 +4,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/db';
 import { openAIClient } from '@/lib/ai/openai-client';
 import { extractTextFromFile } from '@/lib/document-processor';
 import { validateUpload, sanitizeFilename } from '@/lib/upload-utils';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
+import { virusScanner } from '@/lib/security/virus-scanner';
+import { fileTypeValidator } from '@/lib/security/file-type-validator';
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const formData = await request.formData();
     
@@ -27,10 +31,29 @@ export async function POST(request: NextRequest) {
     const confidentialityLevel = formData.get('confidentialityLevel') as string || 'CONFIDENTIAL';
     const enableAI = formData.get('enableAI') === 'true';
 
-    // Validate required fields
-    if (!file || !organizationId || !uploadedById) {
+    // SECURITY: Use authenticated user's organization
+    const userOrganizationId = user.organizationId;
+    const userUploaderId = user.userId;
+
+    if (!userOrganizationId) {
       return NextResponse.json(
-        { success: false, error: 'File, organizationId, and uploadedById are required' },
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Verify user can only upload to their own organization
+    if (organizationId && organizationId !== userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot upload evidence to other organizations' },
+        { status: 403 }
+      );
+    }
+
+    // Validate required fields
+    if (!file) {
+      return NextResponse.json(
+        { success: false, error: 'File is required' },
         { status: 400 }
       );
     }
@@ -49,15 +72,56 @@ export async function POST(request: NextRequest) {
     const sanitizedFilename = sanitizeFilename(file.name);
     const fileExtension = sanitizedFilename.split('.').pop();
     const storedFilename = `${fileId}.${fileExtension}`;
-    
+
     // Create upload directory
-    const uploadDir = join(process.cwd(), 'uploads', organizationId);
+    const uploadDir = join(process.cwd(), 'uploads', userOrganizationId);
     await mkdir(uploadDir, { recursive: true });
-    
-    // Save file
-    const filePath = join(uploadDir, storedFilename);
+
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const buffer = Buffer.from(bytes);
+
+    // SECURITY: Validate file type using magic bytes (not just MIME type)
+    const fileTypeResult = fileTypeValidator.validateFileType(buffer, file.name, file.type);
+    if (!fileTypeResult.isValid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `File validation failed: ${fileTypeResult.error}`,
+          details: {
+            declaredExtension: fileExtension,
+            detectedType: fileTypeResult.detectedType,
+            detectedExtension: fileTypeResult.detectedExtension,
+            mismatch: fileTypeResult.mismatch
+          }
+        },
+        { status: 400 }
+      );
+    }
+
+    // Write file to disk temporarily for virus scanning
+    const filePath = join(uploadDir, storedFilename);
+    await writeFile(filePath, buffer);
+
+    // SECURITY: Scan file for viruses and malware
+    const scanResult = await virusScanner.scanFile(filePath, buffer);
+    if (!scanResult.isClean) {
+      // Delete the infected file immediately
+      await unlink(filePath);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'File failed security scan',
+          details: {
+            threats: scanResult.threats,
+            scanEngine: scanResult.scanEngine,
+            message: 'The uploaded file was detected as malware and has been deleted'
+          }
+        },
+        { status: 400 }
+      );
+    }
 
     // Extract text content from file
     let extractedText = '';
@@ -111,7 +175,7 @@ export async function POST(request: NextRequest) {
         description,
         fileName: storedFilename,
         originalName: file.name,
-        filePath: `/uploads/${organizationId}/${storedFilename}`,
+        filePath: `/uploads/${userOrganizationId}/${storedFilename}`,
         fileSize: file.size,
         mimeType: file.type,
         category: suggestedCategory,
@@ -122,12 +186,12 @@ export async function POST(request: NextRequest) {
         keyPoints,
         confidentialityFlags,
         embeddings,
-        organizationId,
+        organizationId: userOrganizationId,
         caseId: caseId || null,
-        uploadedById,
+        uploadedById: userUploaderId,
         version: '1.0',
         isProcessed: true,
-        checksum: await generateFileChecksum(Buffer.from(bytes)),
+        checksum: await generateFileChecksum(buffer),
         metadata: {
           processingTimestamp: new Date().toISOString(),
           aiProcessed: enableAI && extractedText.length > 0,
@@ -225,7 +289,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Determine document type based on MIME type
