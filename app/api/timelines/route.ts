@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, paginate } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
 // GET /api/timelines - Get all timeline events with pagination
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -17,8 +19,10 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // Build where clause
-    const where: any = {};
+    // SECURITY: Filter by user's organization to ensure data isolation
+    const where: any = {
+      organizationId: user.organizationId || organizationId
+    };
     
     if (search) {
       where.OR = [
@@ -31,10 +35,6 @@ export async function GET(request: NextRequest) {
       where.caseId = caseId;
     }
 
-    if (organizationId) {
-      where.organizationId = organizationId;
-    }
-    
     if (eventType) {
       where.eventType = eventType;
     }
@@ -98,10 +98,10 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/timelines - Create new timeline event
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body = await request.json();
     const {
@@ -122,10 +122,21 @@ export async function POST(request: NextRequest) {
       attachments
     } = body;
 
-    // Validate required fields
-    if (!title || !eventDate || !organizationId || !caseId || !createdById) {
+    // SECURITY: Use authenticated user's organization and user ID
+    const userOrganizationId = user.organizationId || organizationId;
+    const userCreatorId = user.userId;
+
+    if (!userOrganizationId) {
       return NextResponse.json(
-        { success: false, error: 'Title, event date, organization, case, and creator are required' },
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
+
+    // Validate required fields
+    if (!title || !eventDate || !caseId) {
+      return NextResponse.json(
+        { success: false, error: 'Title, event date, and case are required' },
         { status: 400 }
       );
     }
@@ -143,22 +154,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (caseData.organizationId !== organizationId) {
+    if (caseData.organizationId !== userOrganizationId) {
       return NextResponse.json(
         { success: false, error: 'Case does not belong to this organization' },
         { status: 400 }
-      );
-    }
-
-    // Validate creator exists
-    const creator = await prisma.user.findUnique({
-      where: { id: createdById }
-    });
-
-    if (!creator) {
-      return NextResponse.json(
-        { success: false, error: 'Creator not found' },
-        { status: 404 }
       );
     }
 
@@ -171,9 +170,9 @@ export async function POST(request: NextRequest) {
         endDate: endDate ? new Date(endDate) : null,
         location,
         participants,
-        organizationId,
+        organizationId: userOrganizationId,
         caseId,
-        createdById,
+        createdById: userCreatorId,
         importance,
         isVerified,
         source,
@@ -210,4 +209,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

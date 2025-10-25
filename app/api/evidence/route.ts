@@ -5,8 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     
@@ -18,16 +20,19 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const confidentialityLevel = searchParams.get('confidentialityLevel');
 
-    if (!organizationId) {
+    // SECURITY: Use authenticated user's organization
+    const userOrganizationId = user.organizationId;
+
+    if (!userOrganizationId) {
       return NextResponse.json(
-        { success: false, error: 'organizationId is required' },
-        { status: 400 }
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
       );
     }
 
     // Build where clause
     const where: any = {
-      organizationId
+      organizationId: userOrganizationId
     };
 
     if (caseId) {
@@ -102,9 +107,9 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body = await request.json();
     
@@ -128,11 +133,35 @@ export async function POST(request: NextRequest) {
       notes
     } = body;
 
-    // Validate required fields
-    if (!title || !type || !caseId || !organizationId) {
+    // SECURITY: Use authenticated user's organization and user ID
+    const userOrganizationId = user.organizationId;
+    const userUserId = user.userId;
+
+    if (!userOrganizationId) {
       return NextResponse.json(
-        { success: false, error: 'Title, type, caseId, and organizationId are required' },
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
+
+    // Validate required fields
+    if (!title || !type || !caseId) {
+      return NextResponse.json(
+        { success: false, error: 'Title, type, and caseId are required' },
         { status: 400 }
+      );
+    }
+
+    // Verify case belongs to user's organization
+    const caseData = await prisma.case.findUnique({
+      where: { id: caseId },
+      select: { organizationId: true }
+    });
+
+    if (!caseData || caseData.organizationId !== userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Case not found or access denied' },
+        { status: 404 }
       );
     }
 
@@ -147,7 +176,7 @@ export async function POST(request: NextRequest) {
         location,
         custodian,
         caseId,
-        organizationId,
+        organizationId: userOrganizationId,
         documentId,
         isAuthenticated,
         relevance,
@@ -159,7 +188,7 @@ export async function POST(request: NextRequest) {
         chainOfCustody: [{
           action: 'CREATED',
           timestamp: new Date().toISOString(),
-          userId: body.userId || 'system',
+          userId: userUserId,
           location: location || 'Digital',
           notes: `Evidence record created: ${title}`
         }]
@@ -197,9 +226,9 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body = await request.json();
     const { id, ...updateData } = body;
@@ -211,16 +240,23 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Get existing evidence for chain of custody
+    // SECURITY: Get existing evidence and verify organization access
     const existing = await prisma.evidence.findUnique({
       where: { id },
-      select: { chainOfCustody: true, title: true }
+      select: { chainOfCustody: true, title: true, organizationId: true }
     });
 
     if (!existing) {
       return NextResponse.json(
         { success: false, error: 'Evidence not found' },
         { status: 404 }
+      );
+    }
+
+    if (existing.organizationId !== user.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
       );
     }
 
@@ -232,8 +268,8 @@ export async function PUT(request: NextRequest) {
     chainOfCustody.push({
       action: 'UPDATED',
       timestamp: new Date().toISOString(),
-      userId: updateData.userId || 'system',
-      changes: Object.keys(updateData).filter(key => key !== 'userId'),
+      userId: user.userId,
+      changes: Object.keys(updateData).filter(key => key !== 'userId' && key !== 'updateNotes'),
       notes: updateData.updateNotes || `Evidence record updated`
     });
 
@@ -282,9 +318,9 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -296,15 +332,31 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Check if evidence exists
+    // SECURITY: Check if evidence exists and user has access
     const evidence = await prisma.evidence.findUnique({
-      where: { id }
+      where: { id },
+      select: { id: true, organizationId: true }
     });
 
     if (!evidence) {
       return NextResponse.json(
         { success: false, error: 'Evidence not found' },
         { status: 404 }
+      );
+    }
+
+    if (evidence.organizationId !== user.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Only admins and lawyers can delete evidence
+    if (user.role !== 'ADMIN' && user.role !== 'LAWYER' && user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions to delete evidence' },
+        { status: 403 }
       );
     }
 
@@ -325,4 +377,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
