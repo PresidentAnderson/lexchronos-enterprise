@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
+import {
   updateSubscriptionUsage as updateStripeUsage,
   USAGE_PRICING,
   formatCurrency
 } from '@/lib/stripe';
-import { 
+import {
   recordUsage,
   getUsageRecordsForPeriod,
   getLawFirmWithSubscription,
   updateSubscriptionUsage,
   checkUsageLimits
 } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
 // Record usage schema
@@ -29,16 +31,27 @@ const updateUsageSchema = z.object({
 });
 
 // GET /api/usage - Get usage records for a law firm
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const lawFirmId = searchParams.get('lawFirmId');
     const billingPeriod = searchParams.get('billingPeriod');
 
-    if (!lawFirmId) {
+    // SECURITY: Use authenticated user's organization
+    const userOrganizationId = user.organizationId;
+
+    if (!userOrganizationId) {
       return NextResponse.json(
-        { success: false, error: 'Law firm ID is required' },
-        { status: 400 }
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Verify user can only access their own organization's usage data
+    if (lawFirmId && lawFirmId !== userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied to usage data of other organizations' },
+        { status: 403 }
       );
     }
 
@@ -46,7 +59,7 @@ export async function GET(request: NextRequest) {
     const currentPeriod = billingPeriod || new Date().toISOString().slice(0, 7);
 
     // Get law firm with subscription details
-    const lawFirm = await getLawFirmWithSubscription(lawFirmId);
+    const lawFirm = await getLawFirmWithSubscription(userOrganizationId);
     if (!lawFirm) {
       return NextResponse.json(
         { success: false, error: 'Law firm not found' },
@@ -55,10 +68,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Get usage records for the period
-    const usageRecords = await getUsageRecordsForPeriod(lawFirmId, currentPeriod);
+    const usageRecords = await getUsageRecordsForPeriod(userOrganizationId, currentPeriod);
 
     // Check current usage limits
-    const usageLimits = await checkUsageLimits(lawFirmId);
+    const usageLimits = await checkUsageLimits(userOrganizationId);
 
     // Aggregate usage by metric
     const aggregatedUsage = usageRecords.reduce((acc, record) => {
@@ -103,7 +116,7 @@ export async function GET(request: NextRequest) {
       success: true,
       usage: {
         billingPeriod: currentPeriod,
-        lawFirmId,
+        lawFirmId: userOrganizationId,
         subscription: lawFirm.subscription ? {
           plan: lawFirm.subscription.plan,
           status: lawFirm.subscription.status,
@@ -139,15 +152,31 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-// POST /api/usage - Record usage
-export async function POST(request: NextRequest) {
+// POST /api/usage - Record usage (Admin only)
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
+    // SECURITY: Only admins can record usage manually
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Only administrators can manually record usage' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = recordUsageSchema.parse(body);
 
     const { lawFirmId, metric, quantity, billingPeriod } = validatedData;
+
+    // SECURITY: Verify lawFirmId matches user's organization
+    if (lawFirmId !== user.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot record usage for other organizations' },
+        { status: 403 }
+      );
+    }
 
     // Default to current month if no billing period specified
     const currentPeriod = billingPeriod || new Date().toISOString().slice(0, 7);
@@ -194,15 +223,31 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-// PUT /api/usage - Update current usage counters
-export async function PUT(request: NextRequest) {
+// PUT /api/usage - Update current usage counters (Admin only)
+export const PUT = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
+    // SECURITY: Only admins can update usage counters
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Only administrators can update usage counters' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = updateUsageSchema.parse(body);
 
     const { lawFirmId, currentUsers, currentStorage } = validatedData;
+
+    // SECURITY: Verify lawFirmId matches user's organization
+    if (lawFirmId !== user.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot update usage for other organizations' },
+        { status: 403 }
+      );
+    }
 
     // Get law firm subscription
     const lawFirm = await getLawFirmWithSubscription(lawFirmId);
@@ -282,4 +327,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
