@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth/jwt';
 
 // Import metrics collector dynamically to avoid build issues
 async function getMetricsCollector() {
@@ -17,6 +18,15 @@ async function getMetricsCollector() {
 }
 
 export async function GET(request: NextRequest) {
+  // SECURITY: Only admins and monitoring systems can access metrics
+  const user = await auth(request);
+  if (!user) {
+    return new NextResponse('Unauthorized - Authentication required', { status: 401 });
+  }
+
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+    return new NextResponse('Forbidden - Admin access required', { status: 403 });
+  }
   const { searchParams } = new URL(request.url);
   const format = searchParams.get('format') || 'prometheus';
 

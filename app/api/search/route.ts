@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
 // GET /api/search - Global search across all entities
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
@@ -11,6 +13,24 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const categories = searchParams.get('categories')?.split(',') || ['cases', 'documents', 'users', 'timelines', 'notes'];
 
+    // SECURITY: Use authenticated user's organization
+    const userOrganizationId = user.organizationId;
+
+    if (!userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Verify user can only search within their own organization
+    if (organizationId && organizationId !== userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot search data from other organizations' },
+        { status: 403 }
+      );
+    }
+
     if (!query) {
       return NextResponse.json(
         { success: false, error: 'Search query is required' },
@@ -18,16 +38,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID is required' },
-        { status: 400 }
-      );
-    }
-
     const searchResults = {
       query,
-      organizationId,
+      organizationId: userOrganizationId,
       categories: categories,
       results: {} as Record<string, any[]>,
       totalResults: 0,
@@ -38,7 +51,7 @@ export async function GET(request: NextRequest) {
     if (categories.includes('cases') && (!type || type === 'cases')) {
       const cases = await prisma.case.findMany({
         where: {
-          organizationId,
+          organizationId: userOrganizationId,
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
             { caseNumber: { contains: query, mode: 'insensitive' } },
@@ -82,7 +95,7 @@ export async function GET(request: NextRequest) {
     if (categories.includes('documents') && (!type || type === 'documents')) {
       const documents = await prisma.document.findMany({
         where: {
-          organizationId,
+          organizationId: userOrganizationId,
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
             { description: { contains: query, mode: 'insensitive' } },
@@ -131,7 +144,7 @@ export async function GET(request: NextRequest) {
     if (categories.includes('users') && (!type || type === 'users')) {
       const users = await prisma.user.findMany({
         where: {
-          organizationId,
+          organizationId: userOrganizationId,
           isActive: true,
           OR: [
             { firstName: { contains: query, mode: 'insensitive' } },
@@ -168,7 +181,7 @@ export async function GET(request: NextRequest) {
     if (categories.includes('timelines') && (!type || type === 'timelines')) {
       const timelines = await prisma.timeline.findMany({
         where: {
-          organizationId,
+          organizationId: userOrganizationId,
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
             { description: { contains: query, mode: 'insensitive' } },
@@ -215,7 +228,7 @@ export async function GET(request: NextRequest) {
     if (categories.includes('notes') && (!type || type === 'notes')) {
       const notes = await prisma.note.findMany({
         where: {
-          organizationId,
+          organizationId: userOrganizationId,
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
             { content: { contains: query, mode: 'insensitive' } }
@@ -261,7 +274,7 @@ export async function GET(request: NextRequest) {
     if (categories.includes('evidence') && (!type || type === 'evidence')) {
       const evidence = await prisma.evidence.findMany({
         where: {
-          organizationId,
+          organizationId: userOrganizationId,
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
             { description: { contains: query, mode: 'insensitive' } },
@@ -305,7 +318,7 @@ export async function GET(request: NextRequest) {
       const deadlines = await prisma.deadline.findMany({
         where: {
           case: {
-            organizationId
+            organizationId: userOrganizationId
           },
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
@@ -362,10 +375,10 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/search/advanced - Advanced search with complex filters
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body = await request.json();
     const {
@@ -378,10 +391,21 @@ export async function POST(request: NextRequest) {
       offset = 0
     } = body;
 
-    if (!organizationId) {
+    // SECURITY: Use authenticated user's organization
+    const userOrganizationId = user.organizationId;
+
+    if (!userOrganizationId) {
       return NextResponse.json(
-        { success: false, error: 'Organization ID is required' },
-        { status: 400 }
+        { success: false, error: 'User not associated with an organization' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Verify user can only search within their own organization
+    if (organizationId && organizationId !== userOrganizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot search data from other organizations' },
+        { status: 403 }
       );
     }
 
@@ -424,4 +448,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, paginate } from '@/lib/db';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
 // GET /api/notifications - Get user notifications with pagination
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -15,15 +17,19 @@ export async function GET(request: NextRequest) {
     const isArchived = searchParams.get('isArchived');
     const priority = searchParams.get('priority');
 
-    if (!userId) {
+    // SECURITY: User can only access their own notifications
+    const userAuthId = user.userId;
+
+    // SECURITY: Verify user can only see their own notifications
+    if (userId && userId !== userAuthId) {
       return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
+        { success: false, error: 'Access denied to other users\' notifications' },
+        { status: 403 }
       );
     }
 
     // Build where clause
-    const where: any = { userId };
+    const where: any = { userId: userAuthId };
     
     if (type) {
       where.type = type;
@@ -62,7 +68,7 @@ export async function GET(request: NextRequest) {
     // Get notification counts
     const counts = await prisma.notification.groupBy({
       by: ['isRead'],
-      where: { userId, isArchived: false },
+      where: { userId: userAuthId, isArchived: false },
       _count: { _all: true }
     });
 
@@ -87,17 +93,25 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-// POST /api/notifications - Create new notification
-export async function POST(request: NextRequest) {
+// POST /api/notifications - Create new notification (Admin only)
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
+    // SECURITY: Only admins and system can create notifications for other users
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'Only administrators can create notifications' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       type,
       title,
       message,
-      userId,
+      userId: targetUserId,
       relatedId,
       relatedType,
       actionUrl,
@@ -107,22 +121,31 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!type || !title || !message || !userId) {
+    if (!type || !title || !message || !targetUserId) {
       return NextResponse.json(
         { success: false, error: 'Type, title, message, and userId are required' },
         { status: 400 }
       );
     }
 
-    // Validate user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
+    // Validate target user exists and belongs to same organization
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, organizationId: true }
     });
 
-    if (!user) {
+    if (!targetUser) {
       return NextResponse.json(
-        { success: false, error: 'User not found' },
+        { success: false, error: 'Target user not found' },
         { status: 404 }
+      );
+    }
+
+    // SECURITY: Verify target user belongs to same organization
+    if (targetUser.organizationId !== user.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot create notifications for users in other organizations' },
+        { status: 403 }
       );
     }
 
@@ -131,7 +154,7 @@ export async function POST(request: NextRequest) {
         type,
         title,
         message,
-        userId,
+        userId: targetUserId,
         relatedId,
         relatedType,
         actionUrl,
@@ -169,22 +192,26 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/notifications/mark-read - Mark multiple notifications as read
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request: NextRequest, user: JWTPayload) => {
   try {
     const body = await request.json();
-    const { notificationIds, userId, markAll = false } = body;
+    const { notificationIds, userId: requestedUserId, markAll = false } = body;
 
-    if (!userId) {
+    // SECURITY: User can only mark their own notifications as read
+    const userAuthId = user.userId;
+
+    // SECURITY: Verify user can only modify their own notifications
+    if (requestedUserId && requestedUserId !== userAuthId) {
       return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
+        { success: false, error: 'Access denied to other users\' notifications' },
+        { status: 403 }
       );
     }
 
-    let where: any = { userId, isRead: false };
+    let where: any = { userId: userAuthId, isRead: false };
 
     if (markAll) {
       // Mark all unread notifications as read
@@ -217,4 +244,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
