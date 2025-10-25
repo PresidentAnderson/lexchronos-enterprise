@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { emailService } from '@/lib/email';
+import { withAuth } from '@/lib/middleware/auth';
+import { JWTPayload } from '@/lib/auth/jwt';
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: JWTPayload) => {
+  // SECURITY: Only admins can send test emails
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+    return NextResponse.json(
+      { success: false, error: 'Only administrators can send test emails' },
+      { status: 403 }
+    );
+  }
   try {
     // Parse request body
     const body = await request.json();
@@ -53,18 +62,25 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Test email error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Email test failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );
   }
-}
+});
 
 // GET method to check email configuration status
-export async function GET() {
+export const GET = withAuth(async (request: NextRequest, user: JWTPayload) => {
+  // SECURITY: Only admins can view email configuration
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+    return NextResponse.json(
+      { success: false, error: 'Only administrators can view email configuration' },
+      { status: 403 }
+    );
+  }
   try {
     const isConfigured = !!(
       process.env.SMTP_HOST &&
@@ -100,12 +116,12 @@ export async function GET() {
     });
   } catch (error) {
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to check email configuration',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );
   }
-}
+});
