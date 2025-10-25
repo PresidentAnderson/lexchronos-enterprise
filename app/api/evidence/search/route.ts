@@ -128,14 +128,16 @@ async function performSemanticSearch(
   limit: number
 ): Promise<SearchResult[]> {
   try {
+    const { Prisma } = require('@prisma/client');
+
     // Generate embeddings for the search query
     const queryEmbeddings = await openAIClient.generateEmbeddings(query);
-    
-    // Use PostgreSQL's vector similarity search (requires pgvector extension)
-    const whereClause = buildWhereClause(filters);
-    
+
+    // SECURITY: Use safe parameterized WHERE clause to prevent SQL injection
+    const whereConditions = buildSafeWhereClause(filters);
+
     const documents = await prisma.$queryRaw`
-      SELECT 
+      SELECT
         d.*,
         c.case_number,
         c.title as case_title,
@@ -146,7 +148,7 @@ async function performSemanticSearch(
       FROM documents d
       LEFT JOIN cases c ON d.case_id = c.id
       LEFT JOIN user_profiles u ON d.uploaded_by_id = u.id
-      WHERE ${whereClause}
+      WHERE ${whereConditions}
         AND d.embeddings IS NOT NULL
         AND array_length(d.embeddings, 1) > 0
       ORDER BY relevance_score DESC
@@ -175,38 +177,42 @@ async function performFullTextSearch(
   page: number,
   limit: number
 ): Promise<SearchResult[]> {
-  const whereClause = buildWhereClause(filters);
-  
-  // Build full-text search query
-  const searchVector = `
-    to_tsvector('english', 
-      COALESCE(d.title, '') || ' ' || 
-      COALESCE(d.description, '') || ' ' || 
-      COALESCE(d.extracted_text, '') || ' ' ||
-      COALESCE(d.ai_summary, '')
-    )
-  `;
-  
-  const searchQuery = `plainto_tsquery('english', $1)`;
-  
+  const { Prisma } = require('@prisma/client');
+
+  // SECURITY: Use safe parameterized WHERE clause to prevent SQL injection
+  const whereConditions = buildSafeWhereClause(filters);
+
   const documents = await prisma.$queryRaw`
-    SELECT 
+    SELECT
       d.*,
       c.case_number,
       c.title as case_title,
       u.first_name,
       u.last_name,
-      ts_rank(${searchVector}, ${searchQuery}) as relevance_score,
-      ts_headline('english', 
-        COALESCE(d.extracted_text, d.description, ''), 
-        ${searchQuery},
+      ts_rank(
+        to_tsvector('english',
+          COALESCE(d.title, '') || ' ' ||
+          COALESCE(d.description, '') || ' ' ||
+          COALESCE(d.extracted_text, '') || ' ' ||
+          COALESCE(d.ai_summary, '')
+        ),
+        plainto_tsquery('english', ${query})
+      ) as relevance_score,
+      ts_headline('english',
+        COALESCE(d.extracted_text, d.description, ''),
+        plainto_tsquery('english', ${query}),
         'MaxWords=50, MinWords=10, MaxFragments=3'
       ) as highlights
     FROM documents d
     LEFT JOIN cases c ON d.case_id = c.id
     LEFT JOIN user_profiles u ON d.uploaded_by_id = u.id
-    WHERE ${whereClause}
-      AND ${searchVector} @@ ${searchQuery}
+    WHERE ${whereConditions}
+      AND to_tsvector('english',
+        COALESCE(d.title, '') || ' ' ||
+        COALESCE(d.description, '') || ' ' ||
+        COALESCE(d.extracted_text, '') || ' ' ||
+        COALESCE(d.ai_summary, '')
+      ) @@ plainto_tsquery('english', ${query})
     ORDER BY relevance_score DESC
     LIMIT ${limit}
     OFFSET ${(page - 1) * limit}
@@ -346,41 +352,48 @@ async function getTotalCount(
 }
 
 /**
- * Build WHERE clause for raw SQL queries
+ * Build WHERE clause for raw SQL queries using safe parameterized queries
+ * SECURITY: Uses Prisma.sql to prevent SQL injection
  */
-function buildWhereClause(filters: SearchFilters): string {
-  const conditions = [`d.organization_id = '${filters.organizationId}'`];
-  
+function buildSafeWhereClause(filters: SearchFilters) {
+  const { Prisma } = require('@prisma/client');
+
+  let whereConditions = Prisma.sql`d.organization_id = ${filters.organizationId}`;
+
   if (filters.caseIds?.length) {
-    conditions.push(`d.case_id IN (${filters.caseIds.map(id => `'${id}'`).join(', ')})`);
+    whereConditions = Prisma.sql`${whereConditions} AND d.case_id = ANY(${filters.caseIds})`;
   }
-  
+
   if (filters.categories?.length) {
-    conditions.push(`d.category IN (${filters.categories.map(c => `'${c}'`).join(', ')})`);
+    whereConditions = Prisma.sql`${whereConditions} AND d.category = ANY(${filters.categories})`;
   }
-  
+
   if (filters.confidentialityLevels?.length) {
-    conditions.push(`d.confidentiality_level IN (${filters.confidentialityLevels.map(l => `'${l}'`).join(', ')})`);
+    whereConditions = Prisma.sql`${whereConditions} AND d.confidentiality_level = ANY(${filters.confidentialityLevels})`;
   }
-  
+
   if (filters.uploadedBy) {
-    conditions.push(`d.uploaded_by_id = '${filters.uploadedBy}'`);
+    whereConditions = Prisma.sql`${whereConditions} AND d.uploaded_by_id = ${filters.uploadedBy}`;
   }
-  
+
   if (filters.hasAISummary !== undefined) {
-    conditions.push(`d.ai_summary IS ${filters.hasAISummary ? 'NOT NULL' : 'NULL'}`);
+    if (filters.hasAISummary) {
+      whereConditions = Prisma.sql`${whereConditions} AND d.ai_summary IS NOT NULL`;
+    } else {
+      whereConditions = Prisma.sql`${whereConditions} AND d.ai_summary IS NULL`;
+    }
   }
-  
+
   if (filters.dateRange) {
     if (filters.dateRange.start) {
-      conditions.push(`d.created_at >= '${filters.dateRange.start}'`);
+      whereConditions = Prisma.sql`${whereConditions} AND d.created_at >= ${new Date(filters.dateRange.start)}`;
     }
     if (filters.dateRange.end) {
-      conditions.push(`d.created_at <= '${filters.dateRange.end}'`);
+      whereConditions = Prisma.sql`${whereConditions} AND d.created_at <= ${new Date(filters.dateRange.end)}`;
     }
   }
-  
-  return conditions.join(' AND ');
+
+  return whereConditions;
 }
 
 /**

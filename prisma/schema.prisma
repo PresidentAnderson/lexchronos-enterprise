@@ -107,6 +107,7 @@ model Organization {
   notes                  Note[]
   subscription           Subscription?
   payments               Payment[]
+  paymentMethods         PaymentMethod[]
   invoices               Invoice[]
   conflictEntities       ConflictEntity[]
   conflictChecks         ConflictCheck[]
@@ -919,6 +920,43 @@ model Payment {
   @@index([stripePaymentIntentId])
   @@index([status])
   @@map("payments")
+}
+
+// ===== PAYMENT METHODS MODEL =====
+model PaymentMethod {
+  id                    String   @id @default(cuid())
+  stripePaymentMethodId String   @unique
+
+  // Organization association
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Payment method details
+  type        String  // card, bank_account, us_bank_account, sepa_debit, etc.
+  last4       String? // Last 4 digits
+  brand       String? // Visa, Mastercard, Amex, etc. for cards
+  expiryMonth Int?    // Expiry month for cards
+  expiryYear  Int?    // Expiry year for cards
+
+  // Bank account details (if applicable)
+  bankName        String? // Bank name for bank accounts
+  accountHolderName String? // Account holder name
+
+  // Status
+  isDefault Boolean @default(false) // Is this the default payment method
+  isActive  Boolean @default(true)  // Is this payment method active
+
+  // Metadata
+  metadata Json?
+
+  // Audit fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([stripePaymentMethodId])
+  @@index([organizationId, isDefault])
+  @@map("payment_methods")
 }
 
 model Invoice {

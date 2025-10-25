@@ -1,8 +1,22 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
+// SECURITY: Validate JWT secrets on module load
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL: JWT_SECRET environment variable is not set in production. Application cannot start without a secure JWT secret.');
+  }
+  console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.');
+}
+
+if (!process.env.JWT_REFRESH_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('FATAL: JWT_REFRESH_SECRET environment variable is not set in production.');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-insecure-secret-DO-NOT-USE-IN-PRODUCTION'
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m' // Changed from 7d to 15m for better security
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d'
 
 export interface JWTPayload {
   userId: string
@@ -49,8 +63,8 @@ export class AuthService {
   }
 
   static generateRefreshToken(userId: string): string {
-    return jwt.sign({ userId, type: 'refresh' }, JWT_SECRET, {
-      expiresIn: '30d',
+    return jwt.sign({ userId, type: 'refresh' }, JWT_REFRESH_SECRET, {
+      expiresIn: JWT_REFRESH_EXPIRES_IN,
       issuer: 'lexchrono',
       audience: 'lexchrono-refresh',
     })
@@ -58,7 +72,7 @@ export class AuthService {
 
   static verifyRefreshToken(token: string): { userId: string } | null {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET, {
+      const decoded = jwt.verify(token, JWT_REFRESH_SECRET, {
         issuer: 'lexchrono',
         audience: 'lexchrono-refresh',
       }) as { userId: string; type: string }

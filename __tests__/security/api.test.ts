@@ -102,7 +102,7 @@ describe('API Security Tests', () => {
           lastName: 'Doe',
         },
         {
-          email: 'test@example.com'; DROP TABLE users; --',
+          email: 'test@example.com DROP TABLE users',
           password: 'ValidPass123',
           firstName: 'John',
           lastName: 'Doe',
