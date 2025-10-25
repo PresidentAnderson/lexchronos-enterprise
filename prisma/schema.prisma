@@ -60,6 +60,9 @@ model User {
 
   @@index([email])
   @@index([organizationId])
+  @@index([role]) // For filtering by role
+  @@index([isActive]) // For filtering active users
+  @@index([lastLogin]) // For sorting by last activity
   @@map("users")
 }
 
@@ -206,6 +209,10 @@ model Case {
   @@index([assigneeId])
   @@index([status])
   @@index([caseNumber])
+  @@index([priority]) // For filtering and sorting by priority
+  @@index([type]) // For filtering by case type
+  @@index([createdAt]) // For sorting by creation date
+  @@index([closeDate]) // For filtering closed cases
   @@map("cases")
 }
 
@@ -263,6 +270,10 @@ model Document {
   @@index([caseId])
   @@index([category])
   @@index([uploadedById])
+  @@index([type]) // For filtering by document type
+  @@index([isConfidential]) // For filtering confidential documents
+  @@index([createdAt]) // For sorting by upload date
+  @@index([checksum]) // For duplicate detection
   @@map("documents")
 }
 
@@ -411,6 +422,9 @@ model BillingEntry {
   @@index([userId])
   @@index([date])
   @@index([isBillable])
+  @@index([isInvoiced]) // For filtering un invoiced entries
+  @@index([type]) // For filtering by billing type (TIME/EXPENSE)
+  @@index([invoiceId]) // For grouping by invoice
   @@map("billing_entries")
 }
 
@@ -520,6 +534,10 @@ model Evidence {
   @@index([caseId])
   @@index([type])
   @@index([documentId])
+  @@index([dateObtained]) // For sorting by acquisition date
+  @@index([isAuthenticated]) // For filtering authenticated evidence
+  @@index([relevance]) // For filtering by relevance level
+  @@index([createdAt]) // For sorting by creation date
   @@map("evidence")
 }
 
